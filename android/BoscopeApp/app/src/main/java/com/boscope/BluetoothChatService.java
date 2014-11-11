@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.bluetoothoscilloscope.bluetest;
+package com.boscope;
 
 import java.io.BufferedInputStream;
 import java.io.IOException;

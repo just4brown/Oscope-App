@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.bluetoothoscilloscope.bluetest;
+package com.boscope;
 
 import android.app.ActionBar;
 import android.app.Activity;

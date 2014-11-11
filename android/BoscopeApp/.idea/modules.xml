@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/BlueTest.iml" filepath="$PROJECT_DIR$/BlueTest.iml" />
+      <module fileurl="file://$PROJECT_DIR$/BoscopeApp.iml" filepath="$PROJECT_DIR$/BoscopeApp.iml" />
       <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" />
     </modules>
   </component>

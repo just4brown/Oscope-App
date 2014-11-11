@@ -1,4 +1,4 @@
-package com.bluetoothoscilloscope.bluetest;
+package com.boscope.myapplication;
 
 import android.app.Application;
 import android.test.ApplicationTestCase;

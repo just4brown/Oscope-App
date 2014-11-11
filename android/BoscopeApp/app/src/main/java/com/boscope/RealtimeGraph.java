@@ -1,4 +1,4 @@
-package com.bluetoothoscilloscope.bluetest;
+package com.boscope;
 
 import android.app.Activity;
 import android.graphics.Color;
