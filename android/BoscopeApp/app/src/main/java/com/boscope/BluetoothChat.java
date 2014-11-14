@@ -36,9 +36,17 @@ import android.view.inputmethod.EditorInfo;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import com.jjoe64.graphview.GraphView;
+import com.jjoe64.graphview.GraphView.GraphViewData;
+import com.jjoe64.graphview.GraphViewSeries;
+import com.jjoe64.graphview.LineGraphView;
+
+import java.util.ArrayList;
 
 /**
  * This is the main Activity that displays the current chat session.
@@ -80,6 +88,7 @@ public class BluetoothChat extends Activity {
     // Member object for the chat services
     private BluetoothChatService mChatService = null;
 
+    private GraphViewSeries currentGraphData;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -87,7 +96,7 @@ public class BluetoothChat extends Activity {
         if(D) Log.e(TAG, "+++ ON CREATE +++");
 
         // Set up the window layout
-        setContentView(R.layout.main);
+        setContentView(R.layout.graphs);
 
         // Get local Bluetooth adapter
         mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
@@ -98,6 +107,12 @@ public class BluetoothChat extends Activity {
             finish();
             return;
         }
+        currentGraphData = generateSampleSineWave();
+        GraphView graphView = new LineGraphView(this, "");
+        ((LineGraphView) graphView).setDataPointsRadius(15f);
+        graphView.addSeries(currentGraphData);
+        LinearLayout layout = (LinearLayout) findViewById(R.id.graph1);
+        layout.addView(graphView);
     }
 
     @Override
@@ -268,10 +283,15 @@ public class BluetoothChat extends Activity {
                     mConversationArrayAdapter.add("Me:  " + writeMessage);
                     break;
                 case MESSAGE_READ:
-                    byte[] readBuf = (byte[]) msg.obj;
-                    // construct a string from the valid bytes in the buffer
-                    String readMessage = new String(readBuf, 0, msg.arg1);
-                    mConversationArrayAdapter.add(mConnectedDeviceName+":  " + readMessage);
+                    ArrayList<Double> dataSet = (ArrayList<Double>) msg.obj;
+                    int size = msg.arg1;
+                    GraphViewData[] newGraphData = new GraphViewData[size];
+                    int i=0;
+                    for(double d: dataSet) {
+                        newGraphData[i] = new GraphViewData(d, d+3);
+                        i++;
+                    }
+                    currentGraphData.resetData(newGraphData);
                     break;
                 case MESSAGE_DEVICE_NAME:
                     // save the connected device's name
@@ -353,6 +373,23 @@ public class BluetoothChat extends Activity {
                 return true;
         }
         return false;
+    }
+
+    private GraphViewSeries generateSampleSineWave() {
+        int num = 150;
+        GraphViewData[] data = new GraphViewData[num];
+        double v=0;
+        for (int i=0; i<num; i++) {
+            v += 0.2;
+            data[i] = new GraphViewData(i, Math.sin(v));
+        }
+        return new GraphViewSeries(data);
+    }
+
+    private double getRandom() {
+        double high = 3;
+        double low = 0.5;
+        return Math.random() * (high - low) + low;
     }
 
 }
