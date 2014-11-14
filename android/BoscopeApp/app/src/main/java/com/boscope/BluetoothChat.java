@@ -38,6 +38,7 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ListView;
+import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -107,6 +108,7 @@ public class BluetoothChat extends Activity {
             finish();
             return;
         }
+        initDropDowns();
         currentGraphData = generateSampleSineWave();
         GraphView graphView = new LineGraphView(this, "");
         ((LineGraphView) graphView).setDataPointsRadius(15f);
@@ -127,7 +129,7 @@ public class BluetoothChat extends Activity {
             startActivityForResult(enableIntent, REQUEST_ENABLE_BT);
             // Otherwise, setup the chat session
         } else {
-            if (mChatService == null) setupChat();
+            //if (mChatService == null) setupChat();
         }
     }
 
@@ -326,7 +328,7 @@ public class BluetoothChat extends Activity {
                 // When the request to enable Bluetooth returns
                 if (resultCode == Activity.RESULT_OK) {
                     // Bluetooth is now enabled, so set up a chat session
-                    setupChat();
+                    //setupChat();
                 } else {
                     // User did not enable Bluetooth or an error occurred
                     Log.d(TAG, "BT not enabled");
@@ -390,6 +392,22 @@ public class BluetoothChat extends Activity {
         double high = 3;
         double low = 0.5;
         return Math.random() * (high - low) + low;
+    }
+
+    private void initDropDowns() {
+        Spinner time = (Spinner) findViewById(R.id.timeAxis);
+        Spinner voltage = (Spinner) findViewById(R.id.voltageAxis);
+        // Create an ArrayAdapter using the string array and a default spinner layout
+        ArrayAdapter<CharSequence> adapter1 = ArrayAdapter.createFromResource(this,
+                R.array.time_divisions, android.R.layout.simple_spinner_item);
+        ArrayAdapter<CharSequence> adapter2 = ArrayAdapter.createFromResource(this,
+                R.array.voltage_divisions, android.R.layout.simple_spinner_item);
+        // Specify the layout to use when the list of choices appears
+        adapter1.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        adapter2.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        // Apply the adapter to the spinner
+        time.setAdapter(adapter1);
+        voltage.setAdapter(adapter2);
     }
 
 }

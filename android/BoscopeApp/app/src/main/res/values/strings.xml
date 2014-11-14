@@ -38,4 +38,26 @@
     <string name="secure_connect">Connect a device - Secure</string>
     <string name="insecure_connect">Connect a device - Insecure</string>
     <string name="discoverable">Make discoverable</string>
+
+    <!-- TimeAxis Spinner -->
+    <string-array name="time_divisions">
+        <item>10s/div</item>
+        <item>2s/div</item>
+        <item>1s/div</item>
+        <item>5ms/div</item>
+        <item>2ms/div</item>
+        <item>1us/div</item>
+    </string-array>
+
+    <!-- VoltageAxis Spinner -->
+    <string-array name="voltage_divisions">
+        <item>10V/div</item>
+        <item>5V/div</item>
+        <item>2V/div</item>
+        <item>1V/div</item>
+        <item>0.5V/div</item>
+        <item>0.2V/div</item>
+        <item>0.1V/div</item>
+        <item>0.05V/div</item>
+    </string-array>
 </resources>

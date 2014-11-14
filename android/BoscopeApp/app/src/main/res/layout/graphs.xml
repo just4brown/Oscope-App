@@ -7,16 +7,26 @@
         android:layout_width="fill_parent"
         android:layout_height="wrap_content">
         <LinearLayout
+            android:orientation="horizontal"
+            android:layout_width="wrap_content"
+            android:layout_height="80dip"
+            android:layout_marginBottom="20dip"
+            android:id="@+id/dropdowns">
+
+            <Spinner
+                android:layout_width="150dip"
+                android:layout_height="fill_parent"
+                android:id="@+id/timeAxis" />
+            <Spinner
+                android:layout_width="150dip"
+                android:layout_height="fill_parent"
+                android:id="@+id/voltageAxis" />
+        </LinearLayout>
+        <LinearLayout
             android:orientation="vertical"
             android:layout_width="fill_parent"
             android:layout_height="250dip"
             android:id="@+id/graph1" />
-
-        <LinearLayout
-            android:id="@+id/graph2"
-            android:layout_width="fill_parent"
-            android:layout_height="250dip"
-            android:orientation="vertical" />
 
     </LinearLayout>
 </ScrollView>
