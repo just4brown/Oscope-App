@@ -21,6 +21,7 @@ import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.content.Intent;
+import android.graphics.Color;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
@@ -33,6 +34,8 @@ import android.view.View;
 import android.view.Window;
 import android.view.View.OnClickListener;
 import android.view.inputmethod.EditorInfo;
+import android.widget.AdapterView;
+import android.widget.AdapterView.OnItemSelectedListener;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
@@ -45,6 +48,7 @@ import android.widget.Toast;
 import com.jjoe64.graphview.GraphView;
 import com.jjoe64.graphview.GraphView.GraphViewData;
 import com.jjoe64.graphview.GraphViewSeries;
+import com.jjoe64.graphview.GraphViewStyle;
 import com.jjoe64.graphview.LineGraphView;
 
 import java.util.ArrayList;
@@ -90,6 +94,8 @@ public class BluetoothChat extends Activity {
     private BluetoothChatService mChatService = null;
 
     private GraphViewSeries currentGraphData;
+    private Spinner timeSpinner;
+    private Spinner voltageSpinner;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -111,6 +117,10 @@ public class BluetoothChat extends Activity {
         initDropDowns();
         currentGraphData = generateSampleSineWave();
         GraphView graphView = new LineGraphView(this, "");
+        graphView.getGraphViewStyle().setNumHorizontalLabels(10);
+        graphView.getGraphViewStyle().setNumVerticalLabels(10);
+        graphView.getGraphViewStyle().setVerticalLabelsWidth(1);
+        //graphView.getGraphViewStyle().setHorizontalLabelsWidth(0);
         ((LineGraphView) graphView).setDataPointsRadius(15f);
         graphView.addSeries(currentGraphData);
         LinearLayout layout = (LinearLayout) findViewById(R.id.graph1);
@@ -129,7 +139,7 @@ public class BluetoothChat extends Activity {
             startActivityForResult(enableIntent, REQUEST_ENABLE_BT);
             // Otherwise, setup the chat session
         } else {
-            //if (mChatService == null) setupChat();
+            if (mChatService == null) setupChat();
         }
     }
 
@@ -152,32 +162,8 @@ public class BluetoothChat extends Activity {
 
     private void setupChat() {
         Log.d(TAG, "setupChat()");
-
-        // Initialize the array adapter for the conversation thread
-        mConversationArrayAdapter = new ArrayAdapter<String>(this, R.layout.message);
-        mConversationView = (ListView) findViewById(R.id.in);
-        mConversationView.setAdapter(mConversationArrayAdapter);
-
-        // Initialize the compose field with a listener for the return key
-        mOutEditText = (EditText) findViewById(R.id.edit_text_out);
-        mOutEditText.setOnEditorActionListener(mWriteListener);
-
-        // Initialize the send button with a listener that for click events
-        mSendButton = (Button) findViewById(R.id.button_send);
-        mSendButton.setOnClickListener(new OnClickListener() {
-            public void onClick(View v) {
-                // Send a message using content of the edit text widget
-                TextView view = (TextView) findViewById(R.id.edit_text_out);
-                String message = view.getText().toString();
-                sendMessage(message);
-            }
-        });
-
         // Initialize the BluetoothChatService to perform bluetooth connections
         mChatService = new BluetoothChatService(this, mHandler);
-
-        // Initialize the buffer for outgoing messages
-        mOutStringBuffer = new StringBuffer("");
     }
 
     @Override
@@ -232,20 +218,6 @@ public class BluetoothChat extends Activity {
             mOutEditText.setText(mOutStringBuffer);
         }
     }
-
-    // The action listener for the EditText widget, to listen for the return key
-    private TextView.OnEditorActionListener mWriteListener =
-            new TextView.OnEditorActionListener() {
-                public boolean onEditorAction(TextView view, int actionId, KeyEvent event) {
-                    // If the action is a key-up event on the return key, send the message
-                    if (actionId == EditorInfo.IME_NULL && event.getAction() == KeyEvent.ACTION_UP) {
-                        String message = view.getText().toString();
-                        sendMessage(message);
-                    }
-                    if(D) Log.i(TAG, "END onEditorAction");
-                    return true;
-                }
-            };
 
     private final void setStatus(int resId) {
         final ActionBar actionBar = getActionBar();
@@ -328,7 +300,7 @@ public class BluetoothChat extends Activity {
                 // When the request to enable Bluetooth returns
                 if (resultCode == Activity.RESULT_OK) {
                     // Bluetooth is now enabled, so set up a chat session
-                    //setupChat();
+                    setupChat();
                 } else {
                     // User did not enable Bluetooth or an error occurred
                     Log.d(TAG, "BT not enabled");
@@ -395,8 +367,8 @@ public class BluetoothChat extends Activity {
     }
 
     private void initDropDowns() {
-        Spinner time = (Spinner) findViewById(R.id.timeAxis);
-        Spinner voltage = (Spinner) findViewById(R.id.voltageAxis);
+        timeSpinner = (Spinner) findViewById(R.id.timeAxis);
+        voltageSpinner = (Spinner) findViewById(R.id.voltageAxis);
         // Create an ArrayAdapter using the string array and a default spinner layout
         ArrayAdapter<CharSequence> adapter1 = ArrayAdapter.createFromResource(this,
                 R.array.time_divisions, android.R.layout.simple_spinner_item);
@@ -406,8 +378,36 @@ public class BluetoothChat extends Activity {
         adapter1.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         adapter2.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         // Apply the adapter to the spinner
-        time.setAdapter(adapter1);
-        voltage.setAdapter(adapter2);
+        timeSpinner.setAdapter(adapter1);
+        voltageSpinner.setAdapter(adapter2);
+
+        timeSpinner.setOnItemSelectedListener( new OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int pos, long id) {
+                // stuff
+                String selection = parent.getItemAtPosition(pos).toString();
+                Log.d(TAG, "Selected: " + selection);
+                // changeTimeScale(selection);
+            }
+
+            public void onNothingSelected(AdapterView<?> parent) {
+
+            }
+        });
+
+        voltageSpinner.setOnItemSelectedListener( new OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int pos, long id) {
+                // stuff
+                String selection = parent.getItemAtPosition(pos).toString();
+                Log.d(TAG, "Selected: " + selection);
+                // changeVoltScale(selection);
+            }
+
+            public void onNothingSelected(AdapterView<?> parent) {
+
+            }
+        });
     }
 
 }
