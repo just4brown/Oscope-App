@@ -20,6 +20,7 @@ import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.UUID;
 
@@ -465,19 +466,21 @@ public class BluetoothChatService {
                     if (readed.contains("\n")) {
                         // Send the obtained bytes to the UI Activity
                         try {
-                            double d = Double.parseDouble(readMessage.toString());
+                            NumberFormat nf = NumberFormat.getInstance();
+                            double d = nf.parse(readMessage.toString()).doubleValue();
                             dataSet.add(d);
-                        } catch(NumberFormatException n) {
-                            Log.e(TAG, readMessage.toString() + " Not A Number!", n);
+                        } catch(Exception n) {
+                            Log.e(TAG, readMessage.toString() + " Not A Number! "+ n.getMessage(), n);
                         }
                         int size = dataSet.size();
-                        if(size > 99) {
+                        if(size > 5) {
                             //mHandler.obtainMessage(BluetoothChat.MESSAGE_READ, bytes, -1, buffer)
                             //        .sendToTarget();
-                            mHandler.obtainMessage(BluetoothChat.MESSAGE_READ, size, -1, dataSet);
-
+                            mHandler.obtainMessage(BluetoothChat.MESSAGE_READ, size, -1, dataSet).sendToTarget();
+                            dataSet.clear();
+                            Log.d(TAG, "Sent dataSet to main activity");
                         }
-                        Log.d(TAG, readMessage.toString());
+
                         readMessage.setLength(0);
                     }
 
