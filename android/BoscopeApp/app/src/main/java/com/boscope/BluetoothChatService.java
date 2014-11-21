@@ -457,8 +457,26 @@ public class BluetoothChatService {
             int bytes;
             StringBuilder readMessage = new StringBuilder();
             ArrayList<Double> dataSet = new ArrayList<Double>();
+            int dataCount = 0;
             while (true) {
                 try {
+                    buffer[0] = (byte) mmInStream.read();
+                    String first = new String(buffer, "US-ASCII");
+                    if(first.charAt(0) != '[') {
+                        Log.e(TAG, "No initial bracket!: " + first);
+                    }
+                    byte[] data0_3 = new byte[3];
+                    mmInStream.read(data0_3, 0, 3);
+                    // Stop bit? need to parse data points one at a time
+                    String string_data0_3 = new String(data0_3);
+                    double d = Double.parseDouble(string_data0_3);
+                    dataSet.add(d);
+                    dataCount++;
+                    if(dataCount == 10) {
+                        mHandler.obtainMessage(BluetoothChat.MESSAGE_READ, dataCount, -1, dataSet).sendToTarget();
+                        dataSet = new ArrayList<Double>();
+                    }
+                    /*
                     bytes = mmInStream.read(buffer);
                     String readed = new String(buffer, 0, bytes);
                     readMessage.append(readed);
@@ -482,7 +500,7 @@ public class BluetoothChatService {
                         }
 
                         readMessage.setLength(0);
-                    }
+                    }*/
 
 
 
