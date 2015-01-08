@@ -20,6 +20,7 @@ import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.UnsupportedEncodingException;
 import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.UUID;
@@ -461,20 +462,22 @@ public class BluetoothChatService {
             while (true) {
                 try {
                     buffer[0] = (byte) mmInStream.read();
-                    String first = new String(buffer, "US-ASCII");
-                    if(first.charAt(0) != '[') {
-                        Log.e(TAG, "No initial bracket!: " + first);
+                    if(toASCII(buffer).charAt(0) != '[') {
+                        Log.e(TAG, "No initial bracket!");
                     }
-                    byte[] data0_3 = new byte[3];
-                    mmInStream.read(data0_3, 0, 3);
-                    // Stop bit? need to parse data points one at a time
-                    String string_data0_3 = new String(data0_3);
-                    double d = Double.parseDouble(string_data0_3);
-                    dataSet.add(d);
-                    dataCount++;
-                    if(dataCount == 10) {
-                        mHandler.obtainMessage(BluetoothChat.MESSAGE_READ, dataCount, -1, dataSet).sendToTarget();
-                        dataSet = new ArrayList<Double>();
+                    StringBuilder dataPoint = new StringBuilder();
+                    char current = toASCII((byte) mmInStream.read());
+                    while(Character.isDigit(current)) {
+                        dataPoint.append(current);
+                        current = toASCII((byte) mmInStream.read());
+                    }
+
+                    String string_dataPoint = dataPoint.toString();
+                    Log.e(TAG, "Data: " + string_dataPoint);
+                    if(dataPoint.length() > 0) {
+                        Double d = Double.parseDouble(string_dataPoint);
+                        dataCount++;
+                        mHandler.obtainMessage(BluetoothChat.MESSAGE_READ, dataCount, -1, d).sendToTarget();
                     }
                     /*
                     bytes = mmInStream.read(buffer);
@@ -535,6 +538,24 @@ public class BluetoothChatService {
                 mmSocket.close();
             } catch (IOException e) {
                 Log.e(TAG, "close() of connect socket failed", e);
+            }
+        }
+
+        public String toASCII(byte[] buffer) {
+            try {
+                return new String(buffer, "US-ASCII");
+            } catch(UnsupportedEncodingException u) {
+                return "No ASCII";
+            }
+        }
+
+        public char toASCII(byte single) {
+            try {
+                byte[] buffer = new byte[1];
+                buffer[0] = single;
+                return new String(buffer, "US-ASCII").charAt(0);
+            } catch(UnsupportedEncodingException u) {
+                return '?';
             }
         }
     }

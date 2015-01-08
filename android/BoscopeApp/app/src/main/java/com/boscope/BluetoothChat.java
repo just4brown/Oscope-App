@@ -94,6 +94,7 @@ public class BluetoothChat extends Activity {
     private BluetoothChatService mChatService = null;
 
     private GraphViewSeries currentGraphData;
+    private int numGraphPoints = 0;
     private Spinner timeSpinner;
     private Spinner voltageSpinner;
 
@@ -115,13 +116,25 @@ public class BluetoothChat extends Activity {
             return;
         }
         initDropDowns();
-        currentGraphData = generateSampleSineWave();
+        //currentGraphData = generateSampleSineWave();
+        //currentGraphData = generateRandomData();
+
         GraphView graphView = new LineGraphView(this, "");
+        graphView.setShowHorizontalLabels(false);
+        graphView.setShowVerticalLabels(false);
         graphView.getGraphViewStyle().setNumHorizontalLabels(10);
         graphView.getGraphViewStyle().setNumVerticalLabels(10);
-        graphView.getGraphViewStyle().setVerticalLabelsWidth(1);
+        graphView.setViewPort(0,15);
+        graphView.setScrollable(true);
+        graphView.setManualYAxisBounds(1100, 0);
         //graphView.getGraphViewStyle().setHorizontalLabelsWidth(0);
-        ((LineGraphView) graphView).setDataPointsRadius(15f);
+        //((LineGraphView) graphView).setDataPointsRadius(15f);
+        ((LineGraphView) graphView).setDrawDataPoints(true);
+        ((LineGraphView) graphView).setDataPointsRadius(4);
+        GraphViewData firstPoint = new GraphViewData(0,512);
+        GraphViewData[] dataset = new GraphViewData[1];
+        dataset[0] = firstPoint;
+        currentGraphData = new GraphViewSeries(dataset);
         graphView.addSeries(currentGraphData);
         LinearLayout layout = (LinearLayout) findViewById(R.id.graph1);
         layout.addView(graphView);
@@ -255,7 +268,8 @@ public class BluetoothChat extends Activity {
                     String writeMessage = new String(writeBuf);
                     break;
                 case MESSAGE_READ:
-                    ArrayList<Double> dataSet = (ArrayList<Double>) msg.obj;
+                    Double dataPoint = (Double) msg.obj;
+                    /*
                     int size = msg.arg1;
                     GraphViewData[] newGraphData = new GraphViewData[size];
                     int i=0;
@@ -264,6 +278,8 @@ public class BluetoothChat extends Activity {
                         i++;
                     }
                     currentGraphData.resetData(newGraphData);
+                    */
+                    currentGraphData.appendData(new GraphViewData(++numGraphPoints, dataPoint), true, 100);
                     break;
                 case MESSAGE_DEVICE_NAME:
                     // save the connected device's name
@@ -354,13 +370,24 @@ public class BluetoothChat extends Activity {
         for (int i=0; i<num; i++) {
             v += 0.2;
             data[i] = new GraphViewData(i, Math.sin(v));
+            numGraphPoints++;
         }
         return new GraphViewSeries(data);
     }
 
-    private double getRandom() {
-        double high = 3;
-        double low = 0.5;
+    private GraphViewSeries generateRandomData() {
+        int num = 60;
+        GraphViewData[] data = new GraphViewData[num];
+        double v=0;
+        for (int i=0; i<num; i++) {
+            v += 0.2;
+            data[i] = new GraphViewData(i, getRandom(10, 1024));
+            numGraphPoints++;
+        }
+        return new GraphViewSeries(data);
+    }
+
+    private double getRandom(double high, double low) {
         return Math.random() * (high - low) + low;
     }
 
