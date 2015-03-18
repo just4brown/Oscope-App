@@ -1,3 +1,4 @@
+/*
 package com.boscope;
 
 import android.app.Activity;
@@ -47,13 +48,15 @@ public class RealtimeGraph extends Activity {
 
         // graph with dynamically genereated horizontal and vertical labels
         GraphView graphView;
-        /*if (getIntent().getStringExtra("type").equals("bar")) {
+        */
+/*if (getIntent().getStringExtra("type").equals("bar")) {
             graphView = new BarGraphView(
                     this // context
                     , "GraphViewDemo" // heading
             );
             ((BarGraphView) graphView).setDrawValuesOnTop(true);
-        } else {*/
+        } else {*//*
+
             graphView = new LineGraphView(
                     this // context
                     , "" // heading
@@ -67,13 +70,16 @@ public class RealtimeGraph extends Activity {
         layout.addView(graphView);
 
         // graph with custom labels and drawBackground
-        /*if (getIntent().getStringExtra("type").equals("bar")) {
+        */
+/*if (getIntent().getStringExtra("type").equals("bar")) {
             graphView = new BarGraphView(
                     this
                     , "GraphViewDemo"
             );
             ((BarGraphView) graphView).setDrawValuesOnTop(true);
-        } else {*/
+        } else {*//*
+
 
     }
 }
+*/

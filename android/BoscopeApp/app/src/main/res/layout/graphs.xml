@@ -1,33 +1,53 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="fill_parent"
-    android:layout_height="fill_parent"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
     android:keepScreenOn="true">
     <LinearLayout
-        android:orientation="vertical"
-        android:layout_width="fill_parent"
-        android:layout_height="wrap_content">
-        <LinearLayout
-            android:orientation="horizontal"
+        android:orientation="horizontal"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="8dp">
+        <Spinner
+            android:layout_width="125dip"
+            android:layout_height="wrap_content"
+            android:id="@+id/timeAxis" />
+        <Spinner
+            android:layout_width="125dip"
+            android:layout_height="wrap_content"
+            android:id="@+id/voltageAxis" />
+        <Spinner
+            android:layout_width="75dip"
+            android:layout_height="wrap_content"
+            android:id="@+id/trigger" />
+        <TextView
+            android:id="@+id/conn_status"
             android:layout_width="wrap_content"
-            android:layout_height="80dip"
-            android:layout_marginBottom="20dip"
-            android:id="@+id/dropdowns">
-
-            <Spinner
-                android:layout_width="150dip"
-                android:layout_height="fill_parent"
-                android:id="@+id/timeAxis" />
-            <Spinner
-                android:layout_width="150dip"
-                android:layout_height="fill_parent"
-                android:id="@+id/voltageAxis" />
-        </LinearLayout>
-        <LinearLayout
-            android:orientation="vertical"
-            android:layout_width="fill_parent"
-            android:layout_height="250dip"
-            android:id="@+id/graph1" />
-
+            android:layout_height="fill_parent"
+            android:layout_marginLeft="15dp"
+            android:paddingTop="20dp"
+            android:text="No Connection"/>
+        <TextView
+            android:id="@+id/data_status"
+            android:layout_width="wrap_content"
+            android:layout_height="fill_parent"
+            android:layout_marginLeft="25dp"
+            android:paddingTop="20dp"
+            android:text="No Data"/>
     </LinearLayout>
-</ScrollView>
+    <LinearLayout
+        android:orientation="horizontal"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="8dp">
+        <com.boscope.VerticalSeekBar
+            android:id="@+id/trigger_slider"
+            android:layout_width="wrap_content"
+            android:layout_height="fill_parent" />
+        <com.jjoe64.graphview.GraphView
+            android:layout_width="wrap_content"
+            android:layout_height="fill_parent"
+            android:id="@+id/graph1" />
+    </LinearLayout>
+</LinearLayout>

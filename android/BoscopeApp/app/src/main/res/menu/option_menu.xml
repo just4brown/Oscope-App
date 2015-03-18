@@ -18,12 +18,16 @@
           android:icon="@android:drawable/ic_menu_search"
           android:title="@string/secure_connect"
           android:showAsAction="ifRoom|withText" />
-    <item android:id="@+id/insecure_connect_scan"
-          android:icon="@android:drawable/ic_menu_search"
-          android:title="@string/insecure_connect"
-          android:showAsAction="ifRoom|withText" />
-    <item android:id="@+id/discoverable"
-          android:icon="@android:drawable/ic_menu_mylocation"
-          android:title="@string/discoverable"
-          android:showAsAction="ifRoom|withText" />
+    <!--<item android:id="@+id/insecure_connect_scan"-->
+          <!--android:icon="@android:drawable/ic_menu_search"-->
+          <!--android:title="@string/insecure_connect"-->
+          <!--android:showAsAction="ifRoom|withText" />-->
+    <!--<item android:id="@+id/discoverable"-->
+          <!--android:icon="@android:drawable/ic_menu_mylocation"-->
+          <!--android:title="@string/discoverable"-->
+          <!--android:showAsAction="ifRoom|withText" />-->
+    <item android:id="@+id/pause"
+        android:icon="@drawable/ic_action_pause"
+        android:title="@string/pause"
+        android:showAsAction="ifRoom|withText" />
 </menu>

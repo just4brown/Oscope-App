@@ -1,18 +1,3 @@
-/*
- * Copyright (C) 2009 The Android Open Source Project
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 
 package com.boscope;
 
@@ -25,6 +10,7 @@ import android.graphics.Color;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
+import android.support.annotation.DrawableRes;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.Menu;
@@ -44,18 +30,18 @@ import android.widget.ListView;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.graphics.Color;
 
 import com.jjoe64.graphview.GraphView;
-import com.jjoe64.graphview.GraphView.GraphViewData;
-import com.jjoe64.graphview.GraphViewSeries;
-import com.jjoe64.graphview.GraphViewStyle;
-import com.jjoe64.graphview.LineGraphView;
+import com.jjoe64.graphview.GridLabelRenderer;
+import com.jjoe64.graphview.series.DataPoint;
+import com.jjoe64.graphview.series.LineGraphSeries;
+import com.jjoe64.graphview.series.Series;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 
-/**
- * This is the main Activity that displays the current chat session.
- */
+
 public class BluetoothChat extends Activity {
     // Debugging
     private static final String TAG = "BluetoothChat";
@@ -93,10 +79,34 @@ public class BluetoothChat extends Activity {
     // Member object for the chat services
     private BluetoothChatService mChatService = null;
 
-    private GraphViewSeries currentGraphData;
+    //private GraphViewSeries currentGraphData;
     private int numGraphPoints = 0;
     private Spinner timeSpinner;
     private Spinner voltageSpinner;
+    private Spinner triggerSpinner;
+    public boolean isOscopePaused = false;
+
+    public static final int DKGRAY = -12303292;
+    public static final int GREEN = -3355444;
+    public int sampNum;
+    public GraphView graphView;
+    public LineGraphSeries<DataPoint> currentSeries;
+    public DataPoint[]  totalSeries;
+    public DataPoint[] dataSeries;
+    public static final int displayBufferSize = 256;
+    public int packnum = 0;
+
+    //Debug timing vars
+    protected long startTime;
+    protected long endTime;
+
+    public int updateCounter;
+    public int lastUpdate;
+
+    // spinner
+    HashMap<String, String> voltageMsg;
+    HashMap<String, String> timingMsg;
+    private VerticalSeekBar triggerSlider;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -108,7 +118,7 @@ public class BluetoothChat extends Activity {
 
         // Get local Bluetooth adapter
         mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
-
+        //triggerSlider = (VerticalSeekBar) findViewById(R.id.trigger_slider);
         // If the adapter is null, then Bluetooth is not supported
         if (mBluetoothAdapter == null) {
             Toast.makeText(this, "Bluetooth is not available", Toast.LENGTH_LONG).show();
@@ -119,25 +129,63 @@ public class BluetoothChat extends Activity {
         //currentGraphData = generateSampleSineWave();
         //currentGraphData = generateRandomData();
 
-        GraphView graphView = new LineGraphView(this, "");
-        graphView.setShowHorizontalLabels(false);
-        graphView.setShowVerticalLabels(false);
-        graphView.getGraphViewStyle().setNumHorizontalLabels(10);
-        graphView.getGraphViewStyle().setNumVerticalLabels(10);
-        graphView.setViewPort(0,15);
-        graphView.setScrollable(true);
-        graphView.setManualYAxisBounds(1100, 0);
-        //graphView.getGraphViewStyle().setHorizontalLabelsWidth(0);
-        //((LineGraphView) graphView).setDataPointsRadius(15f);
-        ((LineGraphView) graphView).setDrawDataPoints(true);
-        ((LineGraphView) graphView).setDataPointsRadius(4);
-        GraphViewData firstPoint = new GraphViewData(0,512);
-        GraphViewData[] dataset = new GraphViewData[1];
-        dataset[0] = firstPoint;
-        currentGraphData = new GraphViewSeries(dataset);
-        graphView.addSeries(currentGraphData);
-        LinearLayout layout = (LinearLayout) findViewById(R.id.graph1);
-        layout.addView(graphView);
+        graphView = (GraphView) findViewById(R.id.graph1);
+        GridLabelRenderer renderer = graphView.getGridLabelRenderer();
+        renderer.setHorizontalLabelsVisible(false);
+        renderer.setVerticalLabelsVisible(false);
+        renderer.setNumHorizontalLabels(21);
+        renderer.setNumVerticalLabels(11);
+        renderer.getStyles().gridColor = DKGRAY;
+
+        //graphView.getViewport()
+        graphView.getViewport().setMaxX(10);
+        graphView.getViewport().setMinX(0);
+
+        DataPoint data[] = generateDataPointdata(500, 0.01);
+        currentSeries = new LineGraphSeries<DataPoint>();
+        currentSeries.resetData(generateDataPointdata(120, 0.1));
+        graphView.addSeries(currentSeries);
+
+        graphView.getViewport().setXAxisBoundsManual(true);
+        graphView.getViewport().setMaxX(256);
+        graphView.getViewport().setYAxisBoundsManual(true);
+        graphView.getViewport().setMaxY(700);
+        graphView.getViewport().setMinY(-700);
+
+        sampNum = 0;
+        dataSeries = new DataPoint[displayBufferSize];
+        totalSeries = new DataPoint[displayBufferSize*2];
+
+        voltageMsg = new HashMap<String, String>();
+        voltageMsg.put("10V/div", "V1707");
+        voltageMsg.put("5V/div", "V1711");
+        voltageMsg.put("2V/div", "V1712");
+        voltageMsg.put("1V/div", "V0307");
+        voltageMsg.put("0.5V/div", "V0311");
+        voltageMsg.put("0.2V/div", "V0312");
+        voltageMsg.put("0.1V/div", "V0607");
+        voltageMsg.put("0.05V/div", "V0611");
+        voltageMsg.put("0.02V/div", "V0612");
+        voltageMsg.put("0.01V/div", "V0614");
+        voltageMsg.put("0.005V/div", "V0616");
+
+        timingMsg = new HashMap<String, String>();
+        timingMsg.put("20\u03BCs/div", "T000010");
+        timingMsg.put("50\u03BCs/div", "T000190");
+        timingMsg.put("100\u03BCs/div", "T000380");
+        timingMsg.put("200\u03BCs/div", "T000760");
+        timingMsg.put("500\u03BCs/div", "T001900");
+        timingMsg.put("1ms/div", "T003800");
+        timingMsg.put("2ms/div", "T007600");
+        timingMsg.put("5ms/div", "T019000");
+        timingMsg.put("10ms/div", "T038000");
+
+        clearDataIndicator();
+        clearConnectedIndicator();
+        updateCounter = 0;
+        lastUpdate = 0;
+        //LinearLayout layout = (LinearLayout) findViewById(R.id.graph1);
+        //layout.addView(graphView);*/
     }
 
     @Override
@@ -213,7 +261,7 @@ public class BluetoothChat extends Activity {
      * Sends a message.
      * @param message  A string of text to send.
      */
-    private void sendMessage(String message) {
+    public void sendStringMessage(String message) {
         // Check that we're actually connected before trying anything
         if (mChatService.getState() != BluetoothChatService.STATE_CONNECTED) {
             Toast.makeText(this, R.string.not_connected, Toast.LENGTH_SHORT).show();
@@ -225,10 +273,11 @@ public class BluetoothChat extends Activity {
             // Get the message bytes and tell the BluetoothChatService to write
             byte[] send = message.getBytes();
             mChatService.write(send);
+            Log.d(TAG, "Message Sent");
 
             // Reset out string buffer to zero and clear the edit text field
-            mOutStringBuffer.setLength(0);
-            mOutEditText.setText(mOutStringBuffer);
+            //mOutStringBuffer.setLength(0);
+            //mOutEditText.setText(mOutStringBuffer);
         }
     }
 
@@ -242,6 +291,30 @@ public class BluetoothChat extends Activity {
         actionBar.setSubtitle(subTitle);
     }
 
+    private void setConnectedIndicator() {
+        TextView conn_status = (TextView) findViewById(R.id.conn_status);
+        conn_status.setText("Connected");
+        conn_status.setTextColor(Color.GREEN);
+    }
+
+    private void clearConnectedIndicator() {
+        TextView conn_status = (TextView) findViewById(R.id.conn_status);
+        conn_status.setText("No Connection");
+        conn_status.setTextColor(Color.GRAY);
+    }
+
+    private void setDataIndicator() {
+        TextView data_status = (TextView) findViewById(R.id.data_status);
+        data_status.setText("Data");
+        data_status.setTextColor(Color.GREEN);
+    }
+
+    private void clearDataIndicator() {
+        TextView data_status = (TextView) findViewById(R.id.data_status);
+        data_status.setText("No Data");
+        data_status.setTextColor(Color.GRAY);
+    }
+
     // The Handler that gets information back from the BluetoothChatService
     private final Handler mHandler = new Handler() {
         @Override
@@ -252,6 +325,7 @@ public class BluetoothChat extends Activity {
                     switch (msg.arg1) {
                         case BluetoothChatService.STATE_CONNECTED:
                             setStatus(getString(R.string.title_connected_to, mConnectedDeviceName));
+                            setConnectedIndicator();
                             break;
                         case BluetoothChatService.STATE_CONNECTING:
                             setStatus(R.string.title_connecting);
@@ -259,6 +333,7 @@ public class BluetoothChat extends Activity {
                         case BluetoothChatService.STATE_LISTEN:
                         case BluetoothChatService.STATE_NONE:
                             setStatus(R.string.title_not_connected);
+                            clearConnectedIndicator();
                             break;
                     }
                     break;
@@ -268,18 +343,32 @@ public class BluetoothChat extends Activity {
                     String writeMessage = new String(writeBuf);
                     break;
                 case MESSAGE_READ:
-                    Double dataPoint = (Double) msg.obj;
-                    /*
-                    int size = msg.arg1;
-                    GraphViewData[] newGraphData = new GraphViewData[size];
-                    int i=0;
-                    for(double d: dataSet) {
-                        newGraphData[i] = new GraphViewData(d, d+3);
-                        i++;
+                    updateCounter++;
+                    setDataIndicator();
+                    double[] newSet = (double[]) msg.obj;
+                    dataSeries = new DataPoint[displayBufferSize];
+                   // In case we need to 
+                   /* double max = 0;
+                    double min = 1024;
+                    for(int i = 0; i < newSet.length; i++) {
+                        if(newSet[i] > max)
+                            max = newSet[i];
+                        else if(newSet[i] < min)
+                            min = newSet[i];
                     }
-                    currentGraphData.resetData(newGraphData);
-                    */
-                    currentGraphData.appendData(new GraphViewData(++numGraphPoints, dataPoint), true, 100);
+                    double mid = (max + min) / 2;*/
+                    double mid = 0;
+                    for(int i = 0; i < newSet.length; i++) {
+                        dataSeries[i] = new DataPoint(i, newSet[i] - mid);
+                    }
+                    //Log.e(TAG, "Max: " + max + ", Min: " + min);
+                    if(!isOscopePaused) {
+                        currentSeries.resetData(dataSeries);
+                    }
+
+                    if(updateCounter == 1000) {
+                        updateCounter = 0;
+                    }
                     break;
                 case MESSAGE_DEVICE_NAME:
                     // save the connected device's name
@@ -350,41 +439,39 @@ public class BluetoothChat extends Activity {
                 serverIntent = new Intent(this, DeviceListActivity.class);
                 startActivityForResult(serverIntent, REQUEST_CONNECT_DEVICE_SECURE);
                 return true;
-            case R.id.insecure_connect_scan:
-                // Launch the DeviceListActivity to see devices and do scan
-                serverIntent = new Intent(this, DeviceListActivity.class);
-                startActivityForResult(serverIntent, REQUEST_CONNECT_DEVICE_INSECURE);
-                return true;
-            case R.id.discoverable:
-                // Ensure this device is discoverable by others
-                ensureDiscoverable();
+//            case R.id.insecure_connect_scan:
+//                // Launch the DeviceListActivity to see devices and do scan
+//                serverIntent = new Intent(this, DeviceListActivity.class);
+//                startActivityForResult(serverIntent, REQUEST_CONNECT_DEVICE_INSECURE);
+//                return true;
+//            case R.id.discoverable:
+//                // Ensure this device is discoverable by others
+//                ensureDiscoverable();
+//                return true;
+            case R.id.pause:
+                isOscopePaused = !isOscopePaused;
+                if(item.getTitle().equals("Running")) {
+                    item.setTitle("Paused");
+                    item.setIcon(R.drawable.ic_action_play);
+                }
+                else if(item.getTitle().equals("Paused")) {
+                    item.setTitle("Running");
+                    item.setIcon(R.drawable.ic_action_pause);
+                }
                 return true;
         }
         return false;
     }
 
-    private GraphViewSeries generateSampleSineWave() {
-        int num = 150;
-        GraphViewData[] data = new GraphViewData[num];
-        double v=0;
-        for (int i=0; i<num; i++) {
-            v += 0.2;
-            data[i] = new GraphViewData(i, Math.sin(v));
-            numGraphPoints++;
+    private DataPoint[] generateDataPointdata(int n, double step) {
+        DataPoint[] series = new DataPoint[n];
+        double x_min = 0,  y_min = 200;
+        double x_max = 10, y_max = 800;
+        for(int i=0; i<n; i++) {
+            x_min += step;
+            series[i] = new DataPoint(x_min, y_min++);
         }
-        return new GraphViewSeries(data);
-    }
-
-    private GraphViewSeries generateRandomData() {
-        int num = 60;
-        GraphViewData[] data = new GraphViewData[num];
-        double v=0;
-        for (int i=0; i<num; i++) {
-            v += 0.2;
-            data[i] = new GraphViewData(i, getRandom(10, 1024));
-            numGraphPoints++;
-        }
-        return new GraphViewSeries(data);
+        return series;
     }
 
     private double getRandom(double high, double low) {
@@ -394,25 +481,33 @@ public class BluetoothChat extends Activity {
     private void initDropDowns() {
         timeSpinner = (Spinner) findViewById(R.id.timeAxis);
         voltageSpinner = (Spinner) findViewById(R.id.voltageAxis);
+        triggerSpinner = (Spinner) findViewById(R.id.trigger);
         // Create an ArrayAdapter using the string array and a default spinner layout
         ArrayAdapter<CharSequence> adapter1 = ArrayAdapter.createFromResource(this,
                 R.array.time_divisions, android.R.layout.simple_spinner_item);
         ArrayAdapter<CharSequence> adapter2 = ArrayAdapter.createFromResource(this,
                 R.array.voltage_divisions, android.R.layout.simple_spinner_item);
+        ArrayAdapter<CharSequence> adapter3 = ArrayAdapter.createFromResource(this,
+                R.array.trigger, android.R.layout.simple_spinner_item);
         // Specify the layout to use when the list of choices appears
         adapter1.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         adapter2.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        adapter3.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         // Apply the adapter to the spinner
         timeSpinner.setAdapter(adapter1);
         voltageSpinner.setAdapter(adapter2);
+        triggerSpinner.setAdapter(adapter3);
 
         timeSpinner.setOnItemSelectedListener( new OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int pos, long id) {
                 // stuff
                 String selection = parent.getItemAtPosition(pos).toString();
-                Log.d(TAG, "Selected: " + selection);
+                Log.d(TAG, "Selected: " + selection + ". Message: " + timingMsg.get(selection));
+                //selection
                 // changeTimeScale(selection);
+                Log.e(TAG, "Sent " + selection + " " + timingMsg.get(selection));
+                sendStringMessage(timingMsg.get(selection));
             }
 
             public void onNothingSelected(AdapterView<?> parent) {
@@ -425,7 +520,25 @@ public class BluetoothChat extends Activity {
             public void onItemSelected(AdapterView<?> parent, View view, int pos, long id) {
                 // stuff
                 String selection = parent.getItemAtPosition(pos).toString();
-                Log.d(TAG, "Selected: " + selection);
+                //selection.
+                Log.d(TAG, "Selected: " + selection + ". Message: " + voltageMsg.get(selection));
+                sendStringMessage(voltageMsg.get(selection));
+                // changeVoltScale(selection);
+            }
+
+            public void onNothingSelected(AdapterView<?> parent) {
+
+            }
+        });
+
+        triggerSpinner.setOnItemSelectedListener( new OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int pos, long id) {
+                // stuff
+                String selection = parent.getItemAtPosition(pos).toString();
+                String message = "G0" + selection;
+                Log.e(TAG, "Selected: " + selection + ". Message: " + message);
+                sendStringMessage(message);
                 // changeVoltScale(selection);
             }
 

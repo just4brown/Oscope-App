@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Copyright (C) 2009 The Android Open Source Project
+<!--
+ Copyright (C) 2009 The Android Open Source Project
 
      Licensed under the Apache License, Version 2.0 (the "License");
      you may not use this file except in compliance with the License.
@@ -13,11 +14,11 @@
      See the License for the specific language governing permissions and
      limitations under the License.
 -->
-
 <resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
-    <string name="app_name">BLUb  SCOPE</string>
 
-    <!--  BluetoothChat -->
+    <string name="app_name">BLU SCOPE</string>
+
+    <!-- BluetoothChat -->
     <string name="send">Send</string>
     <string name="not_connected">You are not connected to a device</string>
     <string name="bt_not_enabled_leaving">Bluetooth was not enabled. Leaving Bluetooth Chat.</string>
@@ -25,7 +26,7 @@
     <string name="title_connected_to">connected to <xliff:g id="device_name">%1$s</xliff:g></string>
     <string name="title_not_connected">not connected</string>
 
-    <!--  DeviceListActivity -->
+    <!-- DeviceListActivity -->
     <string name="scanning">scanning for devices...</string>
     <string name="select_device">select a device to connect</string>
     <string name="none_paired">No devices have been paired</string>
@@ -35,23 +36,27 @@
     <string name="button_scan">Scan for devices</string>
 
     <!-- Options Menu -->
-    <string name="secure_connect">Connect a device - Secure</string>
+    <string name="secure_connect">Connect a device</string>
     <string name="insecure_connect">Connect a device - Insecure</string>
     <string name="discoverable">Make discoverable</string>
+    <string name="pause">Running</string>
 
     <!-- TimeAxis Spinner -->
     <string-array name="time_divisions">
-        <item>10s/div</item>
-        <item>2s/div</item>
-        <item>1s/div</item>
-        <item>5ms/div</item>
+        <item>20μs/div</item>
+        <item>50μs/div</item>
+        <item>100μs/div</item>
+        <item>200μs/div</item>
+        <item>500μs/div</item>
+        <item>1ms/div</item>
         <item>2ms/div</item>
-        <item>1us/div</item>
+        <item>5ms/div</item>
+        <item>10ms/div</item>
     </string-array>
 
     <!-- VoltageAxis Spinner -->
     <string-array name="voltage_divisions">
-        <item>10V/div</item>
+        <item msg="V">10V/div</item>
         <item>5V/div</item>
         <item>2V/div</item>
         <item>1V/div</item>
@@ -59,5 +64,19 @@
         <item>0.2V/div</item>
         <item>0.1V/div</item>
         <item>0.05V/div</item>
+        <item>0.02V/div</item>
+        <item>0.01V/div</item>
+        <item>0.005V/div</item>
     </string-array>
+
+    <string-array name="trigger">
+        <item>50</item>
+        <item>100</item>
+        <item>150</item>
+        <item>200</item>
+        <item>250</item>
+    </string-array>
+
+    <string name="hello_blank_fragment">Hello blank fragment</string>
+
 </resources>
