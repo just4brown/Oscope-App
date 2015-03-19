@@ -27,6 +27,7 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ListView;
+import android.widget.SeekBar;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -118,7 +119,6 @@ public class BluetoothChat extends Activity {
 
         // Get local Bluetooth adapter
         mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
-        //triggerSlider = (VerticalSeekBar) findViewById(R.id.trigger_slider);
         // If the adapter is null, then Bluetooth is not supported
         if (mBluetoothAdapter == null) {
             Toast.makeText(this, "Bluetooth is not available", Toast.LENGTH_LONG).show();
@@ -149,8 +149,8 @@ public class BluetoothChat extends Activity {
         graphView.getViewport().setXAxisBoundsManual(true);
         graphView.getViewport().setMaxX(256);
         graphView.getViewport().setYAxisBoundsManual(true);
-        graphView.getViewport().setMaxY(700);
-        graphView.getViewport().setMinY(-700);
+        graphView.getViewport().setMaxY(1024);
+        graphView.getViewport().setMinY(0);
 
         sampNum = 0;
         dataSeries = new DataPoint[displayBufferSize];
@@ -347,7 +347,7 @@ public class BluetoothChat extends Activity {
                     setDataIndicator();
                     double[] newSet = (double[]) msg.obj;
                     dataSeries = new DataPoint[displayBufferSize];
-                   // In case we need to 
+                   // In case we need to
                    /* double max = 0;
                     double min = 1024;
                     for(int i = 0; i < newSet.length; i++) {
@@ -479,6 +479,7 @@ public class BluetoothChat extends Activity {
     }
 
     private void initDropDowns() {
+        triggerSlider = (VerticalSeekBar) findViewById(R.id.trigger_slider);
         timeSpinner = (Spinner) findViewById(R.id.timeAxis);
         voltageSpinner = (Spinner) findViewById(R.id.voltageAxis);
         triggerSpinner = (Spinner) findViewById(R.id.trigger);
@@ -544,6 +545,29 @@ public class BluetoothChat extends Activity {
 
             public void onNothingSelected(AdapterView<?> parent) {
 
+            }
+        });
+
+        triggerSlider.setMax(1024);
+        triggerSlider.setProgress(512);
+
+        triggerSlider.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+                int progress = seekBar.getProgress();
+                String message = "G" + String.format("%04d", progress);
+                Log.e(TAG, "Selected: " + progress + ". Message: " + message);
+                sendStringMessage(message);
             }
         });
     }

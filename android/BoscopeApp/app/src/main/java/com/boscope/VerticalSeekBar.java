@@ -12,6 +12,8 @@ import android.widget.SeekBar;
 
 public class VerticalSeekBar extends SeekBar {
 
+    protected OnSeekBarChangeListener changeListener;
+
     public VerticalSeekBar(Context context) {
         super(context);
     }
@@ -49,15 +51,29 @@ public class VerticalSeekBar extends SeekBar {
 
         switch (event.getAction()) {
             case MotionEvent.ACTION_DOWN:
-            case MotionEvent.ACTION_MOVE:
-            case MotionEvent.ACTION_UP:
                 setProgress(getMax() - (int) (getMax() * event.getY() / getHeight()));
                 onSizeChanged(getWidth(), getHeight(), 0, 0);
+                if(changeListener != null)
+                    changeListener.onStartTrackingTouch(this);
                 break;
-
+            case MotionEvent.ACTION_MOVE:
+                setProgress(getMax() - (int) (getMax() * event.getY() / getHeight()));
+                onSizeChanged(getWidth(), getHeight(), 0, 0);
+                changeListener.onProgressChanged(this, getMax() - (int) (getMax() * event.getY() / getHeight()), true);
+                break;
+            case MotionEvent.ACTION_UP:
+                setProgress(getMax() - (int) (getMax() * event.getY() / getHeight()));
+                changeListener.onStopTrackingTouch(this);
+                break;
             case MotionEvent.ACTION_CANCEL:
                 break;
         }
         return true;
     }
+
+    @Override
+    public void setOnSeekBarChangeListener(OnSeekBarChangeListener mListener) {
+        this.changeListener = mListener;
+    }
+
 }
