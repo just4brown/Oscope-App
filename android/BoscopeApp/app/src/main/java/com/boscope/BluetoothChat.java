@@ -80,7 +80,6 @@ public class BluetoothChat extends Activity {
     // Member object for the chat services
     private BluetoothChatService mChatService = null;
 
-    //private GraphViewSeries currentGraphData;
     private int numGraphPoints = 0;
     private Spinner timeSpinner;
     private Spinner voltageSpinner;
@@ -126,8 +125,6 @@ public class BluetoothChat extends Activity {
             return;
         }
         initDropDowns();
-        //currentGraphData = generateSampleSineWave();
-        //currentGraphData = generateRandomData();
 
         graphView = (GraphView) findViewById(R.id.graph1);
         GridLabelRenderer renderer = graphView.getGridLabelRenderer();
@@ -137,7 +134,7 @@ public class BluetoothChat extends Activity {
         renderer.setNumVerticalLabels(11);
         renderer.getStyles().gridColor = DKGRAY;
 
-        //graphView.getViewport()
+
         graphView.getViewport().setMaxX(10);
         graphView.getViewport().setMinX(0);
 
@@ -184,8 +181,6 @@ public class BluetoothChat extends Activity {
         clearConnectedIndicator();
         updateCounter = 0;
         lastUpdate = 0;
-        //LinearLayout layout = (LinearLayout) findViewById(R.id.graph1);
-        //layout.addView(graphView);*/
     }
 
     @Override
@@ -263,8 +258,7 @@ public class BluetoothChat extends Activity {
      */
     public void sendStringMessage(String message) {
         // Check that we're actually connected before trying anything
-        if (mChatService.getState() != BluetoothChatService.STATE_CONNECTED) {
-            Toast.makeText(this, R.string.not_connected, Toast.LENGTH_SHORT).show();
+        if (mChatService == null || mChatService.getState() != BluetoothChatService.STATE_CONNECTED) {
             return;
         }
 
@@ -274,10 +268,6 @@ public class BluetoothChat extends Activity {
             byte[] send = message.getBytes();
             mChatService.write(send);
             Log.d(TAG, "Message Sent");
-
-            // Reset out string buffer to zero and clear the edit text field
-            //mOutStringBuffer.setLength(0);
-            //mOutEditText.setText(mOutStringBuffer);
         }
     }
 
@@ -347,16 +337,6 @@ public class BluetoothChat extends Activity {
                     setDataIndicator();
                     double[] newSet = (double[]) msg.obj;
                     dataSeries = new DataPoint[displayBufferSize];
-                   // In case we need to
-                   /* double max = 0;
-                    double min = 1024;
-                    for(int i = 0; i < newSet.length; i++) {
-                        if(newSet[i] > max)
-                            max = newSet[i];
-                        else if(newSet[i] < min)
-                            min = newSet[i];
-                    }
-                    double mid = (max + min) / 2;*/
                     double mid = 0;
                     for(int i = 0; i < newSet.length; i++) {
                         dataSeries[i] = new DataPoint(i, newSet[i] - mid);
@@ -439,15 +419,6 @@ public class BluetoothChat extends Activity {
                 serverIntent = new Intent(this, DeviceListActivity.class);
                 startActivityForResult(serverIntent, REQUEST_CONNECT_DEVICE_SECURE);
                 return true;
-//            case R.id.insecure_connect_scan:
-//                // Launch the DeviceListActivity to see devices and do scan
-//                serverIntent = new Intent(this, DeviceListActivity.class);
-//                startActivityForResult(serverIntent, REQUEST_CONNECT_DEVICE_INSECURE);
-//                return true;
-//            case R.id.discoverable:
-//                // Ensure this device is discoverable by others
-//                ensureDiscoverable();
-//                return true;
             case R.id.pause:
                 isOscopePaused = !isOscopePaused;
                 if(item.getTitle().equals("Running")) {
