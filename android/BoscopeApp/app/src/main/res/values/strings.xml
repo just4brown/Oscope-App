@@ -64,9 +64,6 @@
         <item>0.2V/div</item>
         <item>0.1V/div</item>
         <item>0.05V/div</item>
-        <item>0.02V/div</item>
-        <item>0.01V/div</item>
-        <item>0.005V/div</item>
     </string-array>
 
     <string-array name="trigger">

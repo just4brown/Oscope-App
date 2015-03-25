@@ -8,7 +8,7 @@
         android:orientation="horizontal"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="8dp">
+        android:layout_marginBottom="0dp">
         <Spinner
             android:layout_width="125dip"
             android:layout_height="wrap_content"
@@ -17,10 +17,10 @@
             android:layout_width="125dip"
             android:layout_height="wrap_content"
             android:id="@+id/voltageAxis" />
-        <Spinner
-            android:layout_width="75dip"
-            android:layout_height="wrap_content"
-            android:id="@+id/trigger" />
+        <!--<Spinner-->
+            <!--android:layout_width="75dip"-->
+            <!--android:layout_height="wrap_content"-->
+            <!--android:id="@+id/trigger" />-->
         <TextView
             android:id="@+id/conn_status"
             android:layout_width="wrap_content"
@@ -35,6 +35,18 @@
             android:layout_marginLeft="25dp"
             android:paddingTop="20dp"
             android:text="No Data"/>
+        <Button
+            android:id="@+id/button_screenCap"
+            android:layout_width="wrap_content"
+            android:layout_height="fill_parent"
+            android:text="Scrn"/>
+        <TextView
+            android:id="@+id/frequency"
+            android:layout_width="wrap_content"
+            android:layout_height="fill_parent"
+            android:layout_marginLeft="25dp"
+            android:paddingTop="20dp"
+            android:text="Frequency: "/>
     </LinearLayout>
     <LinearLayout
         android:orientation="horizontal"

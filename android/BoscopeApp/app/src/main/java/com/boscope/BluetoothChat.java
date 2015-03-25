@@ -6,8 +6,10 @@ import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.content.Intent;
+import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.Handler;
 import android.os.Message;
 import android.support.annotation.DrawableRes;
@@ -39,6 +41,11 @@ import com.jjoe64.graphview.series.DataPoint;
 import com.jjoe64.graphview.series.LineGraphSeries;
 import com.jjoe64.graphview.series.Series;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.sql.BatchUpdateException;
 import java.util.ArrayList;
 import java.util.HashMap;
 
@@ -108,6 +115,8 @@ public class BluetoothChat extends Activity {
     HashMap<String, String> timingMsg;
     private VerticalSeekBar triggerSlider;
 
+    private ArrayList<Integer> frequencyBuffer;
+
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -160,11 +169,11 @@ public class BluetoothChat extends Activity {
         voltageMsg.put("1V/div", "V0307");
         voltageMsg.put("0.5V/div", "V0311");
         voltageMsg.put("0.2V/div", "V0312");
-        voltageMsg.put("0.1V/div", "V0607");
-        voltageMsg.put("0.05V/div", "V0611");
-        voltageMsg.put("0.02V/div", "V0612");
-        voltageMsg.put("0.01V/div", "V0614");
-        voltageMsg.put("0.005V/div", "V0616");
+        voltageMsg.put("0.1V/div", "V0614");
+        voltageMsg.put("0.05V/div", "V0616");
+        //voltageMsg.put("0.02V/div", "V0612");
+        //voltageMsg.put("0.01V/div", "V0614");
+        //voltageMsg.put("0.005V/div", "V0616");
 
         timingMsg = new HashMap<String, String>();
         timingMsg.put("20\u03BCs/div", "T000010");
@@ -181,6 +190,7 @@ public class BluetoothChat extends Activity {
         clearConnectedIndicator();
         updateCounter = 0;
         lastUpdate = 0;
+        frequencyBuffer = new ArrayList<Integer>();
     }
 
     @Override
@@ -336,6 +346,18 @@ public class BluetoothChat extends Activity {
                     updateCounter++;
                     setDataIndicator();
                     double[] newSet = (double[]) msg.obj;
+
+                    /*int frequency = (Integer) msg.arg1;
+                    frequencyBuffer.add(frequency);
+                    if(frequencyBuffer.size() > 9) {
+                        StringBuilder values = new StringBuilder();
+                        for( Integer f : frequencyBuffer) {
+                            values.append(f);
+                        }
+                        Log.e(TAG, "Frequencies: " + values);
+                        frequencyBuffer.clear();
+                    }*/
+
                     dataSeries = new DataPoint[displayBufferSize];
                     double mid = 0;
                     for(int i = 0; i < newSet.length; i++) {
@@ -453,22 +475,20 @@ public class BluetoothChat extends Activity {
         triggerSlider = (VerticalSeekBar) findViewById(R.id.trigger_slider);
         timeSpinner = (Spinner) findViewById(R.id.timeAxis);
         voltageSpinner = (Spinner) findViewById(R.id.voltageAxis);
-        triggerSpinner = (Spinner) findViewById(R.id.trigger);
+
         // Create an ArrayAdapter using the string array and a default spinner layout
         ArrayAdapter<CharSequence> adapter1 = ArrayAdapter.createFromResource(this,
                 R.array.time_divisions, android.R.layout.simple_spinner_item);
         ArrayAdapter<CharSequence> adapter2 = ArrayAdapter.createFromResource(this,
                 R.array.voltage_divisions, android.R.layout.simple_spinner_item);
-        ArrayAdapter<CharSequence> adapter3 = ArrayAdapter.createFromResource(this,
-                R.array.trigger, android.R.layout.simple_spinner_item);
+
         // Specify the layout to use when the list of choices appears
         adapter1.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         adapter2.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        adapter3.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+
         // Apply the adapter to the spinner
         timeSpinner.setAdapter(adapter1);
         voltageSpinner.setAdapter(adapter2);
-        triggerSpinner.setAdapter(adapter3);
 
         timeSpinner.setOnItemSelectedListener( new OnItemSelectedListener() {
             @Override
@@ -503,22 +523,6 @@ public class BluetoothChat extends Activity {
             }
         });
 
-        triggerSpinner.setOnItemSelectedListener( new OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(AdapterView<?> parent, View view, int pos, long id) {
-                // stuff
-                String selection = parent.getItemAtPosition(pos).toString();
-                String message = "G0" + selection;
-                Log.e(TAG, "Selected: " + selection + ". Message: " + message);
-                sendStringMessage(message);
-                // changeVoltScale(selection);
-            }
-
-            public void onNothingSelected(AdapterView<?> parent) {
-
-            }
-        });
-
         triggerSlider.setMax(1024);
         triggerSlider.setProgress(512);
 
@@ -541,6 +545,40 @@ public class BluetoothChat extends Activity {
                 sendStringMessage(message);
             }
         });
+
+        Button screenCap = (Button) findViewById(R.id.button_screenCap);
+        screenCap.setOnClickListener(new OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Bitmap bitmap;
+                View graph = findViewById(R.id.graph1);
+                graph.setDrawingCacheEnabled(true);
+                bitmap = Bitmap.createBitmap(graph.getDrawingCache());
+                graph.setDrawingCacheEnabled(false);
+                String path = Environment.getExternalStorageDirectory().toString();
+                Log.e(TAG, "Exporting to: " + path);
+                OutputStream out = null;
+                File file = new File(path, "OscilloscopeGraph.jpg");
+                try {
+                    out = new FileOutputStream(file);
+                    bitmap.compress(Bitmap.CompressFormat.JPEG, 85, out);
+                    out.flush();
+                    out.close();
+                } catch(IOException e) {
+                    Log.e(TAG, "I/O Error", e);
+                    e.getMessage();
+                }
+
+            }
+        });
+
+        /*if(auto-mode) {
+            gather one packet at .02V
+            if(max > 1000 || min < 24) {
+                get a packet lower
+            }
+
+        }*/
     }
 
 }
