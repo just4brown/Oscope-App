@@ -48,6 +48,7 @@ import java.io.OutputStream;
 import java.sql.BatchUpdateException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 
 
 public class BluetoothChat extends Activity {
@@ -111,11 +112,18 @@ public class BluetoothChat extends Activity {
     public int lastUpdate;
 
     // spinner
-    HashMap<String, String> voltageMsg;
+    LinkedHashMap<String, String> voltageMsg;
+    ArrayList<String> voltageMsgArray;
     HashMap<String, String> timingMsg;
+    HashMap<String, Double> timingVal;
     private VerticalSeekBar triggerSlider;
 
-    private ArrayList<Integer> frequencyBuffer;
+    private ArrayList<Double> frequencyBuffer;
+    public boolean autoranging;
+    public int currentVoltageScale;
+    private boolean firstRead;
+    private double currentPeak2peak;
+    private double currentTimeScale;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -162,15 +170,29 @@ public class BluetoothChat extends Activity {
         dataSeries = new DataPoint[displayBufferSize];
         totalSeries = new DataPoint[displayBufferSize*2];
 
-        voltageMsg = new HashMap<String, String>();
-        voltageMsg.put("10V/div", "V1707");
-        voltageMsg.put("5V/div", "V1711");
-        voltageMsg.put("2V/div", "V1712");
-        voltageMsg.put("1V/div", "V0307");
-        voltageMsg.put("0.5V/div", "V0311");
-        voltageMsg.put("0.2V/div", "V0312");
-        voltageMsg.put("0.1V/div", "V0614");
-        voltageMsg.put("0.05V/div", "V0616");
+        // TODO: fix this mess
+        voltageMsg = new LinkedHashMap<String, String>();
+        voltageMsg.put("10V/div", "Va");
+        voltageMsg.put("5V/div", "Vb");
+        voltageMsg.put("2V/div", "Vc");
+        voltageMsg.put("1V/div", "Vd");
+        voltageMsg.put("0.5V/div", "Ve");
+        voltageMsg.put("0.2V/div", "Vf");
+        voltageMsg.put("0.1V/div", "Vg");
+        voltageMsg.put("0.05V/div", "Vh");
+
+        voltageMsgArray = new ArrayList<String>();
+        voltageMsgArray.add(0,"10V/div");
+        voltageMsgArray.add(1, "5V/div");
+        voltageMsgArray.add(2, "2V/div");
+        voltageMsgArray.add(3, "1V/div");
+        voltageMsgArray.add(4, "0.5V/div");
+        voltageMsgArray.add(5, "0.2V/div");
+        voltageMsgArray.add(6, "0.1V/div");
+        voltageMsgArray.add(7, "0.05V/div");
+
+
+        firstRead = true;
         //voltageMsg.put("0.02V/div", "V0612");
         //voltageMsg.put("0.01V/div", "V0614");
         //voltageMsg.put("0.005V/div", "V0616");
@@ -186,11 +208,24 @@ public class BluetoothChat extends Activity {
         timingMsg.put("5ms/div", "T019000");
         timingMsg.put("10ms/div", "T038000");
 
-        clearDataIndicator();
+        timingVal = new HashMap<String, Double>();
+        timingVal.put("20\u03BCs/div", new Double(.00002));
+        timingVal.put("50\u03BCs/div", new Double(.00005));
+        timingVal.put("100\u03BCs/div", new Double(.0001));
+        timingVal.put("200\u03BCs/div", new Double(.0002));
+        timingVal.put("500\u03BCs/div", new Double(.0005));
+        timingVal.put("1ms/div", new Double(.001));
+        timingVal.put("2ms/div", new Double(.002));
+        timingVal.put("5ms/div", new Double(.005));
+        timingVal.put("10ms/div", new Double(.01));
+
+        //clearDataIndicator();
         clearConnectedIndicator();
         updateCounter = 0;
         lastUpdate = 0;
-        frequencyBuffer = new ArrayList<Integer>();
+        frequencyBuffer = new ArrayList<Double>();
+        currentPeak2peak = 0;
+        currentTimeScale = 0;
     }
 
     @Override
@@ -277,7 +312,7 @@ public class BluetoothChat extends Activity {
             // Get the message bytes and tell the BluetoothChatService to write
             byte[] send = message.getBytes();
             mChatService.write(send);
-            Log.d(TAG, "Message Sent");
+            Log.e(TAG, "Message Sent");
         }
     }
 
@@ -303,7 +338,7 @@ public class BluetoothChat extends Activity {
         conn_status.setTextColor(Color.GRAY);
     }
 
-    private void setDataIndicator() {
+    /*private void setDataIndicator() {
         TextView data_status = (TextView) findViewById(R.id.data_status);
         data_status.setText("Data");
         data_status.setTextColor(Color.GREEN);
@@ -313,7 +348,7 @@ public class BluetoothChat extends Activity {
         TextView data_status = (TextView) findViewById(R.id.data_status);
         data_status.setText("No Data");
         data_status.setTextColor(Color.GRAY);
-    }
+    }*/
 
     // The Handler that gets information back from the BluetoothChatService
     private final Handler mHandler = new Handler() {
@@ -343,8 +378,12 @@ public class BluetoothChat extends Activity {
                     String writeMessage = new String(writeBuf);
                     break;
                 case MESSAGE_READ:
+                    if(firstRead) {
+                        sendInitialState();
+                        firstRead = false;
+                    }
                     updateCounter++;
-                    setDataIndicator();
+                    //setDataIndicator();
                     double[] newSet = (double[]) msg.obj;
 
                     /*int frequency = (Integer) msg.arg1;
@@ -352,11 +391,47 @@ public class BluetoothChat extends Activity {
                     if(frequencyBuffer.size() > 9) {
                         StringBuilder values = new StringBuilder();
                         for( Integer f : frequencyBuffer) {
-                            values.append(f);
+                            values.append(f + ", ");
                         }
-                        Log.e(TAG, "Frequencies: " + values);
+                        //Log.e(TAG, "Frequencies: " + values);
                         frequencyBuffer.clear();
                     }*/
+                    // TODO: add some subroutines
+                    double max = 0;
+                    double min = 1024;
+                    for(int i = 0; i < newSet.length; i++) {
+                        if(newSet[i] > max)
+                            max = newSet[i];
+                        else if(newSet[i] < min)
+                            min = newSet[i];
+                    }
+                    currentPeak2peak = max - min;
+                    double midPoint = max - (currentPeak2peak / 2);
+                    int edgePasses = 0;
+
+                    for(int i = 1; i < newSet.length; i++) {
+                        if((newSet[i-1] < midPoint && newSet[i] > midPoint)
+                            || (newSet[i-1] > midPoint && newSet[i] < midPoint))
+                            edgePasses++;
+                    }
+                    int periods = edgePasses / 2;
+                    // TODO: make global
+                    double freq = 1 / (currentTimeScale*20 / periods);
+                    TextView freqLabel = (TextView) findViewById(R.id.frequency);
+                    //freqLabel.setText("f: " + freq + "Hz");
+                    frequencyBuffer.add(freq);
+                    if(frequencyBuffer.size() > 9) {
+                        double total = 0;
+                        for( Double f : frequencyBuffer) {
+                            total += f;
+                        }
+                        double avg = total / 10;
+                        String frequencyPrint = formatFrequency(avg);
+                        freqLabel.setText("f = " + frequencyPrint);
+                        //Log.e(TAG, "Frequencies: " + values);
+                        frequencyBuffer.clear();
+                    }
+
 
                     dataSeries = new DataPoint[displayBufferSize];
                     double mid = 0;
@@ -364,6 +439,51 @@ public class BluetoothChat extends Activity {
                         dataSeries[i] = new DataPoint(i, newSet[i] - mid);
                     }
                     //Log.e(TAG, "Max: " + max + ", Min: " + min);
+
+                    if(autoranging) {
+                        int state = checkRange(max, min);
+                        if(0 < currentVoltageScale && currentVoltageScale < voltageMsgArray.size() - 1) {
+                            switch (state) {
+                                case -1:
+                                    sendStringMessage(voltageMsg.get(voltageMsgArray.get(currentVoltageScale)));
+                                    break;
+                                case 0:
+                                    // keep currentVoltageScale
+                                    voltageSpinner.setSelection(currentVoltageScale);
+                                    autoranging = false;
+                                    break;
+                                case 1:
+                                    sendStringMessage(voltageMsg.get(voltageMsgArray.get(currentVoltageScale)));
+                                    break;
+                            }
+                        } else {
+                            Log.e(TAG, "No remaining steps: " + voltageMsgArray.get(currentVoltageScale));
+                            autoranging = false;
+                        }
+                    }
+
+                    /*if(autorangingTime) {
+                        int state = checkRange(max, min);
+                        if(0 < currentTimingScale && currentTimingScale < timingMsgArray.size() - 1) {
+                            switch (state) {
+                                case -1:
+                                    sendStringMessage(timingMsg.get(timingMsgArray.get(currentTimingScale)));
+                                    break;
+                                case 0:
+                                    // keep currentVoltageScale
+                                    timeSpinner.setSelection(currentTimingScale);
+                                    autorangingTime = false;
+                                    break;
+                                case 1:
+                                    sendStringMessage(timingMsg.get(timingMsgArray.get(currentTimingScale)));
+                                    break;
+                            }
+                        } else {
+                            Log.e(TAG, "No remaining steps: " + timingMsgArray.get(currentTimingScale));
+                            autoranging = false;
+                        }
+                    }*/
+
                     if(!isOscopePaused) {
                         currentSeries.resetData(dataSeries);
                     }
@@ -385,6 +505,35 @@ public class BluetoothChat extends Activity {
             }
         }
     };
+
+    private void sendInitialState() {
+        int start = 3;
+        timeSpinner.setSelection(start);
+        voltageSpinner.setSelection(start);
+        sendStringMessage(timingMsg.get(timeSpinner.getItemAtPosition(start).toString()));
+        sendStringMessage(voltageMsg.get(voltageSpinner.getItemAtPosition(start).toString()));
+        currentVoltageScale = start;
+        currentTimeScale = timingVal.get(timeSpinner.getItemAtPosition(start).toString());
+        String trigger = "G" + String.format("%04d", triggerSlider.getProgress());
+        sendStringMessage(trigger);
+    }
+
+    private String formatFrequency(double avg) {
+        StringBuilder formatted = new StringBuilder();
+        if(avg > 1000) {
+            avg /= 1000;
+            formatted.append(String.format("%.2f", avg));
+            formatted.append(" KHz");
+        } else if (avg > 1000000) {
+            avg /= 1000000;
+            formatted.append(String.format("%.2f", avg));
+            formatted.append(" MHz");
+        } else {
+            formatted.append(String.format("%.2f", avg));
+            formatted.append(" Hz");
+        }
+        return formatted.toString();
+    }
 
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         if(D) Log.d(TAG, "onActivityResult " + resultCode);
@@ -471,6 +620,30 @@ public class BluetoothChat extends Activity {
         return Math.random() * (high - low) + low;
     }
 
+    private int checkRange(double max, double min) {
+        // Ideally 60% of y-axis is covered by data points
+        // 0.6 * 1024 = 614
+        // 0.2 * 1024 = 205
+        int peak2peak = (int)(max - min);
+        int upperBound = 800;
+        int lowerBound = 400;
+        if(lowerBound < peak2peak && peak2peak < upperBound) {
+            Log.e(TAG, "Scale good: " + voltageMsgArray.get(currentVoltageScale) + ", Peak2peak: " + peak2peak);
+            return 0;
+        }
+        if(peak2peak < lowerBound) {
+            Log.e(TAG, "Zooming in: " + voltageMsgArray.get(currentVoltageScale) + ", Peak2peak: " + peak2peak);
+            currentVoltageScale++;
+            return 1;
+        }
+        if(peak2peak > upperBound) {
+            Log.e(TAG, "Zooming out: " + voltageMsgArray.get(currentVoltageScale) + ", Peak2peak: " + peak2peak);
+            currentVoltageScale--;
+            return -1;
+        }
+        return 0;
+    }
+
     private void initDropDowns() {
         triggerSlider = (VerticalSeekBar) findViewById(R.id.trigger_slider);
         timeSpinner = (Spinner) findViewById(R.id.timeAxis);
@@ -500,6 +673,8 @@ public class BluetoothChat extends Activity {
                 // changeTimeScale(selection);
                 Log.e(TAG, "Sent " + selection + " " + timingMsg.get(selection));
                 sendStringMessage(timingMsg.get(selection));
+                currentTimeScale = timingVal.get(selection);
+                Log.e(TAG, "Scale: " + currentTimeScale);
             }
 
             public void onNothingSelected(AdapterView<?> parent) {
@@ -515,6 +690,7 @@ public class BluetoothChat extends Activity {
                 //selection.
                 Log.d(TAG, "Selected: " + selection + ". Message: " + voltageMsg.get(selection));
                 sendStringMessage(voltageMsg.get(selection));
+                currentVoltageScale = pos;
                 // changeVoltScale(selection);
             }
 
@@ -572,13 +748,16 @@ public class BluetoothChat extends Activity {
             }
         });
 
-        /*if(auto-mode) {
-            gather one packet at .02V
-            if(max > 1000 || min < 24) {
-                get a packet lower
+        Button auto = (Button) findViewById(R.id.button_auto);
+        auto.setOnClickListener(new OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if(!autoranging) {
+                    autoranging = true;
+                    currentVoltageScale = 4;
+                }
             }
-
-        }*/
+        });
     }
 
 }

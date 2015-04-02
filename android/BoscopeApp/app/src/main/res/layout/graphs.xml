@@ -11,11 +11,11 @@
         android:layout_marginBottom="0dp">
         <Spinner
             android:layout_width="125dip"
-            android:layout_height="wrap_content"
+            android:layout_height="60dp"
             android:id="@+id/timeAxis" />
         <Spinner
             android:layout_width="125dip"
-            android:layout_height="wrap_content"
+            android:layout_height="60dp"
             android:id="@+id/voltageAxis" />
         <!--<Spinner-->
             <!--android:layout_width="75dip"-->
@@ -24,35 +24,42 @@
         <TextView
             android:id="@+id/conn_status"
             android:layout_width="wrap_content"
-            android:layout_height="fill_parent"
+            android:layout_height="wrap_content"
             android:layout_marginLeft="15dp"
             android:paddingTop="20dp"
             android:text="No Connection"/>
-        <TextView
+        <!--<TextView
             android:id="@+id/data_status"
             android:layout_width="wrap_content"
             android:layout_height="fill_parent"
             android:layout_marginLeft="25dp"
             android:paddingTop="20dp"
-            android:text="No Data"/>
+            android:text="No Data"/>-->
+        <TextView
+            android:id="@+id/frequency"
+            android:layout_width="55dp"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="10dp"
+            android:paddingTop="20dp"
+            android:text="f = "/>
         <Button
             android:id="@+id/button_screenCap"
             android:layout_width="wrap_content"
-            android:layout_height="fill_parent"
+            android:layout_height="wrap_content"
+
             android:text="Scrn"/>
-        <TextView
-            android:id="@+id/frequency"
+        <Button
+            android:id="@+id/button_auto"
             android:layout_width="wrap_content"
-            android:layout_height="fill_parent"
-            android:layout_marginLeft="25dp"
-            android:paddingTop="20dp"
-            android:text="Frequency: "/>
+            android:layout_height="wrap_content"
+
+            android:text="Auto"/>
     </LinearLayout>
     <LinearLayout
         android:orientation="horizontal"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="8dp">
+        android:layout_marginBottom="0dp">
         <com.boscope.VerticalSeekBar
             android:id="@+id/trigger_slider"
             android:layout_width="wrap_content"
@@ -62,4 +69,15 @@
             android:layout_height="fill_parent"
             android:id="@+id/graph1" />
     </LinearLayout>
+    <!--<LinearLayout
+        android:orientation="horizontal"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="2dp">
+        <TextView
+            android:id="@+id/frequency"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="f = ? "/>
+    </LinearLayout>-->
 </LinearLayout>
