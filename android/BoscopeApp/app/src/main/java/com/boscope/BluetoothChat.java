@@ -114,15 +114,20 @@ public class BluetoothChat extends Activity {
     // spinner
     LinkedHashMap<String, String> voltageMsg;
     ArrayList<String> voltageMsgArray;
+    ArrayList<String> timingMsgArray;
     HashMap<String, String> timingMsg;
     HashMap<String, Double> timingVal;
     private VerticalSeekBar triggerSlider;
 
     private ArrayList<Double> frequencyBuffer;
     public boolean autoranging;
+    public boolean autorangingTime;
+    public boolean autorangingVolt;
     public int currentVoltageScale;
+    public int currentTimingScale;
     private boolean firstRead;
     private double currentPeak2peak;
+    // TODO: naming confusion
     private double currentTimeScale;
 
     @Override
@@ -207,6 +212,16 @@ public class BluetoothChat extends Activity {
         timingMsg.put("2ms/div", "T007600");
         timingMsg.put("5ms/div", "T019000");
         timingMsg.put("10ms/div", "T038000");
+
+        timingMsgArray = new ArrayList<String>();
+        timingMsgArray.add(0,"20\u03BCs/div");
+        timingMsgArray.add(1, "50\u03BCs/div");
+        timingMsgArray.add(2, "100\u03BCs/div");
+        timingMsgArray.add(3, "200\u03BCs/div");
+        timingMsgArray.add(4, "1ms/div");
+        timingMsgArray.add(5, "2ms/div");
+        timingMsgArray.add(6, "5ms/div");
+        timingMsgArray.add(7, "10ms/div");
 
         timingVal = new HashMap<String, Double>();
         timingVal.put("20\u03BCs/div", new Double(.00002));
@@ -399,6 +414,7 @@ public class BluetoothChat extends Activity {
                     // TODO: add some subroutines
                     double max = 0;
                     double min = 1024;
+
                     for(int i = 0; i < newSet.length; i++) {
                         if(newSet[i] > max)
                             max = newSet[i];
@@ -433,15 +449,10 @@ public class BluetoothChat extends Activity {
                     }
 
 
-                    dataSeries = new DataPoint[displayBufferSize];
-                    double mid = 0;
-                    for(int i = 0; i < newSet.length; i++) {
-                        dataSeries[i] = new DataPoint(i, newSet[i] - mid);
-                    }
                     //Log.e(TAG, "Max: " + max + ", Min: " + min);
 
                     if(autoranging) {
-                        int state = checkRange(max, min);
+                        int state = checkVoltRange(max, min);
                         if(0 < currentVoltageScale && currentVoltageScale < voltageMsgArray.size() - 1) {
                             switch (state) {
                                 case -1:
@@ -458,12 +469,13 @@ public class BluetoothChat extends Activity {
                             }
                         } else {
                             Log.e(TAG, "No remaining steps: " + voltageMsgArray.get(currentVoltageScale));
+                            // TODO: make volt specific
                             autoranging = false;
                         }
                     }
 
-                    /*if(autorangingTime) {
-                        int state = checkRange(max, min);
+                    if(autorangingTime) {
+                        int state = checkTimeRange(periods);
                         if(0 < currentTimingScale && currentTimingScale < timingMsgArray.size() - 1) {
                             switch (state) {
                                 case -1:
@@ -480,10 +492,44 @@ public class BluetoothChat extends Activity {
                             }
                         } else {
                             Log.e(TAG, "No remaining steps: " + timingMsgArray.get(currentTimingScale));
-                            autoranging = false;
+                            autorangingTime = false;
                         }
-                    }*/
-
+                    }
+                    double scaleFactor = 1;
+                    switch(currentVoltageScale) {
+                        case 0: // 10V/div
+                            scaleFactor = 1.2;
+                            break;
+                        case 1: // 5
+                            scaleFactor = 1.3;
+                            break;
+                        case 2: // 2        1.2
+                            scaleFactor = 1.4;
+                            break;
+                        case 3: // 1        1.3
+                            scaleFactor = 1.3;
+                            break;
+                        case 4: // 0.5      1.4
+                            scaleFactor = 1.4;
+                            break;
+                        case 5: // 0.2
+                            scaleFactor = 1.30;
+                            break;
+                        case 6: // 0.1
+                            scaleFactor = 1.3;
+                            break;
+                        case 7: // 0.05
+                            scaleFactor = 1.3;
+                            break;
+                    }
+                    for(int i = 0; i < newSet.length; i++) {
+                        //newSet[i] *= scaleFactor;
+                    }
+                    dataSeries = new DataPoint[displayBufferSize];
+                    double mid = 0;
+                    for(int i = 0; i < newSet.length; i++) {
+                        dataSeries[i] = new DataPoint(i, newSet[i] - mid);
+                    }
                     if(!isOscopePaused) {
                         currentSeries.resetData(dataSeries);
                     }
@@ -513,6 +559,7 @@ public class BluetoothChat extends Activity {
         sendStringMessage(timingMsg.get(timeSpinner.getItemAtPosition(start).toString()));
         sendStringMessage(voltageMsg.get(voltageSpinner.getItemAtPosition(start).toString()));
         currentVoltageScale = start;
+        currentTimingScale = start;
         currentTimeScale = timingVal.get(timeSpinner.getItemAtPosition(start).toString());
         String trigger = "G" + String.format("%04d", triggerSlider.getProgress());
         sendStringMessage(trigger);
@@ -606,12 +653,11 @@ public class BluetoothChat extends Activity {
     }
 
     private DataPoint[] generateDataPointdata(int n, double step) {
-        DataPoint[] series = new DataPoint[n];
-        double x_min = 0,  y_min = 200;
-        double x_max = 10, y_max = 800;
-        for(int i=0; i<n; i++) {
-            x_min += step;
-            series[i] = new DataPoint(x_min, y_min++);
+        DataPoint[] series = new DataPoint[256];
+        double x_min = 0,  y_min = 512;
+        //double x_max = 10, y_max = 800;
+        for(int i=0; i<256; i++) {
+            series[i] = new DataPoint(x_min++, y_min);
         }
         return series;
     }
@@ -620,13 +666,13 @@ public class BluetoothChat extends Activity {
         return Math.random() * (high - low) + low;
     }
 
-    private int checkRange(double max, double min) {
+    private int checkVoltRange(double max, double min) {
         // Ideally 60% of y-axis is covered by data points
         // 0.6 * 1024 = 614
         // 0.2 * 1024 = 205
         int peak2peak = (int)(max - min);
-        int upperBound = 800;
-        int lowerBound = 400;
+        int upperBound = 600;
+        int lowerBound = 300;
         if(lowerBound < peak2peak && peak2peak < upperBound) {
             Log.e(TAG, "Scale good: " + voltageMsgArray.get(currentVoltageScale) + ", Peak2peak: " + peak2peak);
             return 0;
@@ -639,6 +685,26 @@ public class BluetoothChat extends Activity {
         if(peak2peak > upperBound) {
             Log.e(TAG, "Zooming out: " + voltageMsgArray.get(currentVoltageScale) + ", Peak2peak: " + peak2peak);
             currentVoltageScale--;
+            return -1;
+        }
+        return 0;
+    }
+
+    private int checkTimeRange(int periods) {
+        int upperBound = 8;
+        int lowerBound = 4;
+        if(lowerBound < periods && periods < upperBound) {
+            Log.e(TAG, "Scale good: " + timingMsgArray.get(currentTimingScale) + ", Periods: " + periods);
+            return 0;
+        }
+        if(periods < lowerBound) {
+            Log.e(TAG, "Zooming in: " + timingMsgArray.get(currentTimingScale) + ", Periods: " + periods);
+            currentTimingScale++;
+            return 1;
+        }
+        if(periods > upperBound) {
+            Log.e(TAG, "Zooming out: " + timingMsgArray.get(currentTimingScale) + ", Periods: " + periods);
+            currentTimingScale--;
             return -1;
         }
         return 0;
@@ -674,6 +740,7 @@ public class BluetoothChat extends Activity {
                 Log.e(TAG, "Sent " + selection + " " + timingMsg.get(selection));
                 sendStringMessage(timingMsg.get(selection));
                 currentTimeScale = timingVal.get(selection);
+                currentTimingScale = pos;
                 Log.e(TAG, "Scale: " + currentTimeScale);
             }
 
@@ -755,6 +822,10 @@ public class BluetoothChat extends Activity {
                 if(!autoranging) {
                     autoranging = true;
                     currentVoltageScale = 4;
+                }
+                if(!autorangingTime) {
+                    autorangingTime = true;
+                    currentTimingScale = 4;
                 }
             }
         });
