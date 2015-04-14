@@ -6,18 +6,26 @@ import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.content.Intent;
+import android.gesture.Gesture;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.Message;
 import android.support.annotation.DrawableRes;
 import android.util.Log;
+import android.view.GestureDetector;
 import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
+import android.view.MotionEvent;
+import android.view.ScaleGestureDetector;
 import android.view.View;
 import android.view.Window;
 import android.view.View.OnClickListener;
@@ -49,6 +57,7 @@ import java.sql.BatchUpdateException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import android.graphics.Matrix;
 
 
 public class BluetoothChat extends Activity {
@@ -117,9 +126,11 @@ public class BluetoothChat extends Activity {
     ArrayList<String> timingMsgArray;
     HashMap<String, String> timingMsg;
     HashMap<String, Double> timingVal;
+    HashMap<String, Double> voltageVal;
     private VerticalSeekBar triggerSlider;
 
     private ArrayList<Double> frequencyBuffer;
+    private ArrayList<Double> peakBuffer;
     public boolean autoranging;
     public boolean autorangingTime;
     public boolean autorangingVolt;
@@ -129,6 +140,14 @@ public class BluetoothChat extends Activity {
     private double currentPeak2peak;
     // TODO: naming confusion
     private double currentTimeScale;
+    private double currentNumericalVoltage;
+    private double voltageSccaleFactor;
+    private boolean shifted;
+    private double largestPoint;
+
+    private ScaleGestureDetector SGD;
+    GestureDetector gestureDetector;
+    GestureListener glistener;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -234,13 +253,42 @@ public class BluetoothChat extends Activity {
         timingVal.put("5ms/div", new Double(.005));
         timingVal.put("10ms/div", new Double(.01));
 
+        voltageVal = new HashMap<String, Double>();
+        voltageVal.put("10V/div", new Double(10.0));
+        voltageVal.put("5V/div", new Double(5.0));
+        voltageVal.put("2V/div", new Double(2.0));
+        voltageVal.put("1V/div", new Double(1.0));
+        voltageVal.put("0.5V/div", new Double(0.5));
+        voltageVal.put("0.2V/div", new Double(0.2));
+        voltageVal.put("0.1V/div", new Double(0.1));
+        voltageVal.put("0.05V/div", new Double(0.05));
+
         //clearDataIndicator();
         clearConnectedIndicator();
         updateCounter = 0;
         lastUpdate = 0;
         frequencyBuffer = new ArrayList<Double>();
+        peakBuffer = new ArrayList<Double>();
         currentPeak2peak = 0;
         currentTimeScale = 0;
+        currentNumericalVoltage = 0;
+        voltageSccaleFactor = 1;
+        shifted = false;
+        largestPoint = 0;
+
+        SGD = new ScaleGestureDetector(this, new ScaleListener());
+        gestureDetector = new GestureDetector(this, new GestureListener());
+
+        //glistener = new GestureListener();
+        View graph = (View) findViewById(R.id.graph1);
+        graph.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                return gestureDetector.onTouchEvent(event);
+                //SGD.onTouchEvent(event);
+                //return false;
+            }
+        });
     }
 
     @Override
@@ -342,15 +390,15 @@ public class BluetoothChat extends Activity {
     }
 
     private void setConnectedIndicator() {
-        TextView conn_status = (TextView) findViewById(R.id.conn_status);
-        conn_status.setText("Connected");
-        conn_status.setTextColor(Color.GREEN);
+//        TextView conn_status = (TextView) findViewById(R.id.conn_status);
+//        conn_status.setText("Connected");
+//        conn_status.setTextColor(Color.GREEN);
     }
 
     private void clearConnectedIndicator() {
-        TextView conn_status = (TextView) findViewById(R.id.conn_status);
-        conn_status.setText("No Connection");
-        conn_status.setTextColor(Color.GRAY);
+//        TextView conn_status = (TextView) findViewById(R.id.conn_status);
+//        conn_status.setText("No Connection");
+//        conn_status.setTextColor(Color.GRAY);
     }
 
     /*private void setDataIndicator() {
@@ -421,8 +469,8 @@ public class BluetoothChat extends Activity {
                         else if(newSet[i] < min)
                             min = newSet[i];
                     }
-                    currentPeak2peak = max - min;
-                    double midPoint = max - (currentPeak2peak / 2);
+
+                    double midPoint = max - ((max - min) / 2);
                     int edgePasses = 0;
 
                     for(int i = 1; i < newSet.length; i++) {
@@ -448,22 +496,22 @@ public class BluetoothChat extends Activity {
                         frequencyBuffer.clear();
                     }
 
-
-                    //Log.e(TAG, "Max: " + max + ", Min: " + min);
-
                     if(autoranging) {
-                        int state = checkVoltRange(max, min);
                         if(0 < currentVoltageScale && currentVoltageScale < voltageMsgArray.size() - 1) {
-                            switch (state) {
+                            int voltState = checkVoltRange(max, min);
+                            switch (voltState) {
                                 case -1:
+                                    currentVoltageScale--;
                                     sendStringMessage(voltageMsg.get(voltageMsgArray.get(currentVoltageScale)));
                                     break;
                                 case 0:
                                     // keep currentVoltageScale
+                                    voltageSccaleFactor = 1.32;
                                     voltageSpinner.setSelection(currentVoltageScale);
                                     autoranging = false;
                                     break;
                                 case 1:
+                                    currentVoltageScale++;
                                     sendStringMessage(voltageMsg.get(voltageMsgArray.get(currentVoltageScale)));
                                     break;
                             }
@@ -495,8 +543,16 @@ public class BluetoothChat extends Activity {
                             autorangingTime = false;
                         }
                     }
-                    double scaleFactor = 1;
-                    switch(currentVoltageScale) {
+
+
+
+                    // set currentVoltageScale to 1.3, one lower to 1.2, one bigger to 1.4
+
+                    // if currentVoltageScale is one less than ideal voltage scale: 1.2
+                    // if currentVoltageScale is one more than ideal voltage scale: 1.4
+                    // if currentVoltageScale is equal to ideal voltage scale: 1.3
+
+                    /*switch(currentVoltageScale) {
                         case 0: // 10V/div
                             scaleFactor = 1.2;
                             break;
@@ -521,14 +577,43 @@ public class BluetoothChat extends Activity {
                         case 7: // 0.05
                             scaleFactor = 1.3;
                             break;
+                    }*/
+                    // TODO; upward shifts necessary also?
+                    double verticalShift = 0;
+                    if(max*voltageSccaleFactor > 1024) {
+                        largestPoint = max;
+                        verticalShift = max*voltageSccaleFactor - 1024;
+                        shifted = true;
+                    } else {
+                        shifted = false;
                     }
+
+                    double newMax = 0, newMin = 1024;
                     for(int i = 0; i < newSet.length; i++) {
-                        //newSet[i] *= scaleFactor;
+                        double val = (newSet[i]* voltageSccaleFactor) - verticalShift;
+                        if(val > newMax)
+                            newMax = val;
+                        if(val < newMin)
+                            newMin = val;
+                        newSet[i] = val;
                     }
+                    currentPeak2peak = ((newMax - newMin) / 100) * currentNumericalVoltage;
+                    TextView p2pLabel = (TextView) findViewById(R.id.p2p);
+                    peakBuffer.add(currentPeak2peak);
+                    if(peakBuffer.size() > 4) {
+                        double total = 0;
+                        for( Double p : peakBuffer) {
+                            total += p;
+                        }
+                        double avg = total / 10;
+                        currentPeak2peak = avg;
+                        p2pLabel.setText("p2p = " + String.format("%.2f", currentPeak2peak) + "V");
+                        peakBuffer.clear();
+                    }
+
                     dataSeries = new DataPoint[displayBufferSize];
-                    double mid = 0;
                     for(int i = 0; i < newSet.length; i++) {
-                        dataSeries[i] = new DataPoint(i, newSet[i] - mid);
+                        dataSeries[i] = new DataPoint(i, newSet[i]);
                     }
                     if(!isOscopePaused) {
                         currentSeries.resetData(dataSeries);
@@ -561,8 +646,10 @@ public class BluetoothChat extends Activity {
         currentVoltageScale = start;
         currentTimingScale = start;
         currentTimeScale = timingVal.get(timeSpinner.getItemAtPosition(start).toString());
+        currentNumericalVoltage = voltageVal.get(voltageSpinner.getItemAtPosition(start).toString());
         String trigger = "G" + String.format("%04d", triggerSlider.getProgress());
         sendStringMessage(trigger);
+        //autoranging = true;
     }
 
     private String formatFrequency(double avg) {
@@ -679,20 +766,20 @@ public class BluetoothChat extends Activity {
         }
         if(peak2peak < lowerBound) {
             Log.e(TAG, "Zooming in: " + voltageMsgArray.get(currentVoltageScale) + ", Peak2peak: " + peak2peak);
-            currentVoltageScale++;
+            //currentVoltageScale++;
             return 1;
         }
         if(peak2peak > upperBound) {
             Log.e(TAG, "Zooming out: " + voltageMsgArray.get(currentVoltageScale) + ", Peak2peak: " + peak2peak);
-            currentVoltageScale--;
+            //currentVoltageScale--;
             return -1;
         }
         return 0;
     }
 
     private int checkTimeRange(int periods) {
-        int upperBound = 8;
-        int lowerBound = 4;
+        int upperBound = 6;
+        int lowerBound = 3;
         if(lowerBound < periods && periods < upperBound) {
             Log.e(TAG, "Scale good: " + timingMsgArray.get(currentTimingScale) + ", Periods: " + periods);
             return 0;
@@ -757,8 +844,14 @@ public class BluetoothChat extends Activity {
                 //selection.
                 Log.d(TAG, "Selected: " + selection + ". Message: " + voltageMsg.get(selection));
                 sendStringMessage(voltageMsg.get(selection));
+                if(pos == currentVoltageScale - 1) {
+                    voltageSccaleFactor = 1.2;
+                }
+                if(pos == currentVoltageScale + 1) {
+                    voltageSccaleFactor = 1.4;
+                }
                 currentVoltageScale = pos;
-                // changeVoltScale(selection);
+                currentNumericalVoltage = voltageVal.get(selection);
             }
 
             public void onNothingSelected(AdapterView<?> parent) {
@@ -769,6 +862,12 @@ public class BluetoothChat extends Activity {
         triggerSlider.setMax(1024);
         triggerSlider.setProgress(512);
 
+        Bitmap bmpOriginal = BitmapFactory.decodeResource(this.getResources(), R.drawable.ic_action);
+        Bitmap bmpResult = Bitmap.createBitmap(bmpOriginal.getWidth(), bmpOriginal.getHeight(), Bitmap.Config.ARGB_8888);
+        Canvas tempCanvas = new Canvas(bmpResult);
+        tempCanvas.rotate(90, bmpOriginal.getWidth()/2, bmpOriginal.getHeight()/2);
+        tempCanvas.drawBitmap(bmpOriginal, 0, 0, null);
+        triggerSlider.setThumb(new BitmapDrawable(getResources(), bmpResult));
         triggerSlider.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
@@ -783,6 +882,11 @@ public class BluetoothChat extends Activity {
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {
                 int progress = seekBar.getProgress();
+                double shiftValue = voltageSccaleFactor*largestPoint - 1024;
+                if(shifted) {
+                    progress -= shiftValue;
+                }
+                progress /= voltageSccaleFactor;
                 String message = "G" + String.format("%04d", progress);
                 Log.e(TAG, "Selected: " + progress + ". Message: " + message);
                 sendStringMessage(message);
@@ -829,6 +933,66 @@ public class BluetoothChat extends Activity {
                 }
             }
         });
+    }
+
+    private class ScaleListener extends ScaleGestureDetector.SimpleOnScaleGestureListener {
+        @Override
+        public void onScaleEnd(ScaleGestureDetector detector) {
+        }
+        @Override
+        public boolean onScaleBegin(ScaleGestureDetector detector) {
+            return true;
+        }
+        @Override
+        public boolean onScale(ScaleGestureDetector detector) {
+            Log.e(TAG, "Pinch Detected!");
+            return false;
+        }
+    }
+
+    private class GestureListener extends GestureDetector.SimpleOnGestureListener {
+
+        @Override
+        public boolean onDown(MotionEvent e) {
+            return true;
+        }
+        // event when double tap occurs
+        @Override
+        public boolean onDoubleTap(MotionEvent e) {
+            /*double location = e.getX();
+            Log.e(TAG, "Double Tap! " + e.getX());
+            if(location > 550) {
+                zoomVoltageIn();
+            } else if(location < 550) {
+                zoomVoltageOut();
+            }*/
+            return true;
+        }
+
+        @Override
+        public boolean onScroll(MotionEvent e1, MotionEvent e2, float distanceX, float distanceY) {
+            Log.e(TAG, "Scrolled!");
+            return true;
+        }
+
+        @Override
+        public void onLongPress(MotionEvent ev) {
+            Log.e(TAG, "Long Pressed!");
+        }
+    }
+
+    private void zoomVoltageIn() {
+        voltageSpinner.setSelection(++currentVoltageScale);
+        Log.e(TAG, "Zooming to: " + currentVoltageScale);
+        sendStringMessage(voltageMsg.get(voltageSpinner.getItemAtPosition(currentVoltageScale).toString()));
+        currentNumericalVoltage = voltageVal.get(voltageSpinner.getItemAtPosition(currentVoltageScale).toString());
+    }
+
+    private void zoomVoltageOut() {
+        voltageSpinner.setSelection(--currentVoltageScale);
+        Log.e(TAG, "Zooming to: " + currentVoltageScale);
+        sendStringMessage(voltageMsg.get(voltageSpinner.getItemAtPosition(currentVoltageScale).toString()));
+        currentNumericalVoltage = voltageVal.get(voltageSpinner.getItemAtPosition(currentVoltageScale).toString());
     }
 
 }
