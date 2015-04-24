@@ -469,7 +469,7 @@ public class BluetoothChat extends Activity {
                         else if(newSet[i] < min)
                             min = newSet[i];
                     }
-
+                    Log.e(TAG, "Max, min: " + max  + " " + min);
                     double midPoint = max - ((max - min) / 2);
                     int edgePasses = 0;
 
@@ -544,40 +544,6 @@ public class BluetoothChat extends Activity {
                         }
                     }
 
-
-
-                    // set currentVoltageScale to 1.3, one lower to 1.2, one bigger to 1.4
-
-                    // if currentVoltageScale is one less than ideal voltage scale: 1.2
-                    // if currentVoltageScale is one more than ideal voltage scale: 1.4
-                    // if currentVoltageScale is equal to ideal voltage scale: 1.3
-
-                    /*switch(currentVoltageScale) {
-                        case 0: // 10V/div
-                            scaleFactor = 1.2;
-                            break;
-                        case 1: // 5
-                            scaleFactor = 1.3;
-                            break;
-                        case 2: // 2        1.2
-                            scaleFactor = 1.4;
-                            break;
-                        case 3: // 1        1.3
-                            scaleFactor = 1.3;
-                            break;
-                        case 4: // 0.5      1.4
-                            scaleFactor = 1.4;
-                            break;
-                        case 5: // 0.2
-                            scaleFactor = 1.30;
-                            break;
-                        case 6: // 0.1
-                            scaleFactor = 1.3;
-                            break;
-                        case 7: // 0.05
-                            scaleFactor = 1.3;
-                            break;
-                    }*/
                     // TODO; upward shifts necessary also?
                     double verticalShift = 0;
                     if(max*voltageSccaleFactor > 1024) {
@@ -605,7 +571,7 @@ public class BluetoothChat extends Activity {
                         for( Double p : peakBuffer) {
                             total += p;
                         }
-                        double avg = total / 10;
+                        double avg = total / 5;
                         currentPeak2peak = avg;
                         p2pLabel.setText("p2p = " + String.format("%.2f", currentPeak2peak) + "V");
                         peakBuffer.clear();
@@ -848,7 +814,7 @@ public class BluetoothChat extends Activity {
                     voltageSccaleFactor = 1.2;
                 }
                 if(pos == currentVoltageScale + 1) {
-                    voltageSccaleFactor = 1.4;
+                    voltageSccaleFactor = 1.46;
                 }
                 currentVoltageScale = pos;
                 currentNumericalVoltage = voltageVal.get(selection);
@@ -959,13 +925,13 @@ public class BluetoothChat extends Activity {
         // event when double tap occurs
         @Override
         public boolean onDoubleTap(MotionEvent e) {
-            /*double location = e.getX();
+            double location = e.getX();
             Log.e(TAG, "Double Tap! " + e.getX());
             if(location > 550) {
                 zoomVoltageIn();
             } else if(location < 550) {
                 zoomVoltageOut();
-            }*/
+            }
             return true;
         }
 

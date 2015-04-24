@@ -17,17 +17,20 @@
             android:layout_width="125dip"
             android:layout_height="60dp"
             android:id="@+id/voltageAxis" />
-        <!--<Spinner-->
-            <!--android:layout_width="75dip"-->
-            <!--android:layout_height="wrap_content"-->
-            <!--android:id="@+id/trigger" />-->
         <TextView
-            android:id="@+id/conn_status"
-            android:layout_width="wrap_content"
+            android:id="@+id/p2p"
+            android:layout_width="100dp"
             android:layout_height="wrap_content"
-            android:layout_marginLeft="15dp"
+            android:layout_marginLeft="10dp"
             android:paddingTop="20dp"
-            android:text="No Connection"/>
+            android:text="p2p = "/>
+        <!--<TextView-->
+            <!--android:id="@+id/conn_status"-->
+            <!--android:layout_width="wrap_content"-->
+            <!--android:layout_height="wrap_content"-->
+            <!--android:layout_marginLeft="15dp"-->
+            <!--android:paddingTop="20dp"-->
+            <!--android:text="No Connection"/>-->
         <!--<TextView
             android:id="@+id/data_status"
             android:layout_width="wrap_content"
@@ -37,7 +40,7 @@
             android:text="No Data"/>-->
         <TextView
             android:id="@+id/frequency"
-            android:layout_width="55dp"
+            android:layout_width="100dp"
             android:layout_height="wrap_content"
             android:layout_marginLeft="10dp"
             android:paddingTop="20dp"
@@ -46,8 +49,7 @@
             android:id="@+id/button_screenCap"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-
-            android:text="Scrn"/>
+            android:text="Save"/>
         <Button
             android:id="@+id/button_auto"
             android:layout_width="wrap_content"
@@ -63,7 +65,9 @@
         <com.boscope.VerticalSeekBar
             android:id="@+id/trigger_slider"
             android:layout_width="wrap_content"
-            android:layout_height="fill_parent" />
+            android:layout_height="fill_parent"
+            android:progressDrawable="@android:color/transparent" />
+
         <com.jjoe64.graphview.GraphView
             android:layout_width="wrap_content"
             android:layout_height="fill_parent"
